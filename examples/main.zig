@@ -106,7 +106,7 @@ const App = struct {
             .borders = widget.Borders.all(),
             .set = @as(widget.BorderType, @enumFromInt(state.* % widget.BorderType.count())).set(),
             .padding = widget.Padding.proportional(8),
-            .border_style = .{ .bg = color, .fg = Color.black, .reverse = true },
+            .border_style = .{ .fg = color, .bg = Color.black },
             .style = .{ .bg = Color.black },
         };
 

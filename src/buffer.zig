@@ -5,37 +5,22 @@ const Style = termz.style.Style;
 const Cursor = termz.action.Cursor;
 
 pub const Cell = struct {
-    symbol: ?[]const u8 = null,
+    symbol: ?[4]u8 = null,
     style: ?Style = null,
-
-    pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
-        if (self.symbol) |symbol| {
-            alloc.free(symbol);
-        }
-    }
 
     pub fn eql(self: *const @This(), other: *const @This()) bool {
         if (!std.meta.eql(self.style, other.style)) return false;
-        if (self.symbol != null and other.symbol != null) return std.mem.eql(u8, self.symbol.?, other.symbol.?);
+        if (self.symbol != null and other.symbol != null) {
+            return std.mem.eql(u8, &self.symbol.?, &other.symbol.?);
+        }
         return self.symbol == null and self.symbol == null;
     }
 
-    pub fn clone(self: *@This(), alloc: std.mem.Allocator) !@This() {
-        var s: ?[]u8 = null;
+    pub fn print(self: *const @This(), writer: anytype) !void {
         if (self.symbol) |symbol| {
-            s = try alloc.dupe(u8, symbol);
-        }
-        return .{
-            .symbol = s,
-            .style = self.style,
-        };
-    }
-
-    pub fn print(self: @This(), writer: anytype) !void {
-        if (self.symbol) |symbol| {
-            try writer.print("{s}", .{symbol});
+            try writer.print("{s}", .{ symbol });
         } else {
-            try writer.writeByte(' ');
+            try writer.print(" ", .{});
         }
     }
 };
@@ -99,33 +84,11 @@ pub const Buffer = struct {
         var item = &self.inner[pos];
 
         switch (@TypeOf(char)) {
-            u8 => {
-                if (item.symbol) |symbol| self.alloc.free(symbol);
-                var buffer = try self.alloc.alloc(u8, 1);
-                buffer[0] = char;
-                item.symbol = buffer;
-            },
-            u16 => {
-                var buffer = std.ArrayList(u8).init(self.alloc);
-                var it = std.unicode.Utf16LeIterator.init([1]u16{ char });
-                while (try it.nextCodepoint()) |cp| {
-                    var buff: [4]u8 = undefined;
-                    const length = try std.unicode.utf8Encode(cp, &buff);
-                    try buffer.appendSlice(buff[0..length]);
-                }
-
-                if (item.symbol) |*symbol| self.alloc.free(symbol);
-                item.symbol = try buffer.toOwnedSlice();
-            },
+            u8 => item.symbol = [4]u8{ char, 0, 0, 0 },
             u21, u32, comptime_int => {
-                var buffer = std.ArrayList(u8).init(self.alloc);
-
                 var buff: [4]u8 = [_]u8{0}**4;
-                const length = try std.unicode.utf8Encode(@intCast(char), &buff);
-                try buffer.appendSlice(buff[0..length]);
-
-                if (item.symbol) |symbol| self.alloc.free(symbol);
-                item.symbol = try buffer.toOwnedSlice();
+                _ = try std.unicode.utf8Encode(@intCast(char), &buff);
+                item.symbol = buff;
             },
             else => @compileError("type not supported as a buffer cell")
         }

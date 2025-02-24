@@ -35,21 +35,29 @@ pub fn inner(self: *const @This(), rect: Rect) Rect {
 /// Also render the background styling if it is provided
 pub fn render(self: *const @This(), buffer: *Buffer, rect: Rect) !void {
     if (self.borders.top) {
+        // Top Left corner
         try buffer.set(rect.x, rect.y, self.set.top_left, self.border_style);
+        // Top Edge
         try buffer.setRepeatX(rect.x +| 1, rect.y, rect.width-|2, self.set.top, self.border_style);
+        // Top Right corner
         try buffer.set(rect.x + rect.width-|1, rect.y, self.set.top_right, self.border_style);
     } else if (self.style) |style| {
+        // Fill background styling if no top border
         try buffer.setRepeatX(rect.x, rect.y, rect.width-|1, ' ', style);
     }
 
     if (self.borders.left or self.borders.right) {
         for (1..rect.height-1) |i| {
+            // Left Edge
             if (self.borders.left) try buffer.set(rect.x, rect.y + @as(u16, @intCast(i)), self.set.left, self.border_style);
+            // Fill background styling
             if (self.style) |style| try buffer.setRepeatX(rect.x +| 1, rect.y + @as(u16, @intCast(i)), rect.width-|2, ' ', style);
+            // Right Edge
             if (self.borders.right) try buffer.set(rect.x + rect.width-|1, rect.y + @as(u16, @intCast(i)), self.set.right, self.border_style);
         }
     } else if (self.style) |style| {
         for (1..rect.height-|1) |i| {
+            // Fill background styling
             try buffer.setRepeatX(rect.x, @intCast(i), rect.width-|1, ' ', style);
         }
     }

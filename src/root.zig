@@ -56,19 +56,8 @@ pub const Terminal = struct {
         try self.buffer.render(self.source.writer(), self.previous);
 
         // Snapshot the buffer cells and store them in the previous frame buffer
-        if (self.previous) |prev| {
-            for (prev) |*cell| {
-                cell.deinit(self.allo);
-            }
-            self.allo.free(prev);
-        }
-
-        self.previous = try self.allo.alloc(Cell, self.buffer.inner.len);
-        if (self.previous) |prev| {
-            for (0..prev.len) |i| {
-                prev[i] = try self.buffer.inner[i].clone(self.allo);
-            }
-        }
+        if (self.previous) |prev| self.allo.free(prev);
+        self.previous = try self.allo.dupe(Cell, self.buffer.inner);
     }
 
     pub fn render(self: *@This(), component: anytype) !void {
@@ -80,19 +69,8 @@ pub const Terminal = struct {
         try self.buffer.render(self.source.writer(), self.previous);
 
         // Snapshot the buffer cells and store them in the previous frame buffer
-        if (self.previous) |prev| {
-            for (prev) |*cell| {
-                cell.deinit(self.allo);
-            }
-            self.allo.free(prev);
-        }
-
-        self.previous = try self.allo.alloc(Cell, self.buffer.inner.len);
-        if (self.previous) |prev| {
-            for (0..prev.len) |i| {
-                prev[i] = try self.buffer.inner[i].clone(self.allo);
-            }
-        }
+        if (self.previous) |prev| self.allo.free(prev);
+        self.previous = try self.allo.dupe(Cell, self.buffer.inner);
     }
 };
 
@@ -123,7 +101,7 @@ fn render_component_with_state(buff: *Buffer, rect: Rect, component: anytype, st
                 else => {
                     switch (p.child) {
                         []const u8 => try buff.setSlice(0, 0, component, style),
-                        u21, u8, u32, u16, comptime_int => try buff.set(0, 0, component, style),
+                        u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
                         else => try buff.setFormatable(0, 0, component, style),
                     }
                 }
@@ -132,7 +110,7 @@ fn render_component_with_state(buff: *Buffer, rect: Rect, component: anytype, st
         else => {
             switch (T) {
                 []const u8 => try buff.setSlice(0, 0, component, style),
-                u21, u8, u32, u16, comptime_int => try buff.set(0, 0, component, style),
+                u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
                 else => try buff.setFormatable(0, 0, component, style),
             }
         }
@@ -164,7 +142,7 @@ fn render_component(buff: *Buffer, rect: Rect, component: anytype, style: ?Style
                 else => {
                     switch (p.child) {
                         []const u8 => try buff.setSlice(0, 0, component, style),
-                        u21, u8, u32, u16, comptime_int => try buff.set(0, 0, component, style),
+                        u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
                         else => try buff.setFormatable(0, 0, component, style),
                     }
                 }
@@ -173,7 +151,7 @@ fn render_component(buff: *Buffer, rect: Rect, component: anytype, style: ?Style
         else => {
             switch (T) {
                 []const u8 => try buff.setSlice(0, 0, component, style),
-                u21, u8, u32, u16, comptime_int => try buff.set(0, 0, component, style),
+                u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
                 else => try buff.setFormatable(0, 0, component, style),
             }
         }
