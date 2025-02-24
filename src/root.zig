@@ -16,34 +16,26 @@ pub const Terminal = struct {
     source: std.fs.File,
     buffer: Buffer,
 
-    previous: ?[]Cell = null,
+    previous: []Cell,
 
     pub fn init(allo: std.mem.Allocator, source: Source) !@This() {
-        // _ = source;
         const cols, const rows = try getTermSize();
         return .{
             .buffer = try Buffer.init(allo, cols, rows),
-            .allo = allo,
-            // .source = try std.fs.cwd().createFile("test.txt", .{}),
+            .previous = try allo.alloc(Cell, @intCast(cols * rows)),
             .source = if (source == .Stdout) std.io.getStdOut() else std.io.getStdErr(),
+            .allo = allo,
         };
     }
 
     pub fn deinit(self: *@This()) void {
-        self.source.close();
-        if (self.previous) |prev| {
-            self.allo.free(prev);
-        }
+        self.allo.free(self.previous);
+        self.buffer.deinit();
     }
 
     pub fn resize(self: *@This(), w: u16, h: u16) !void {
-        if (self.previous) |prev| {
-            for (prev) |cell| {
-                cell.deinit(self.allo);
-            }
-            self.allo.free(prev);
-        }
-        self.previous = null;
+        if (self.previous) |prev| self.allo.free(prev);
+        self.previous = self.allo.alloc(Cell, @intCast(w * h));
         self.buffer.resize(w, h);
     }
 
@@ -54,10 +46,6 @@ pub const Terminal = struct {
 
         // Render buffer iterating previous at the same time
         try self.buffer.render(self.source.writer(), self.previous);
-
-        // Snapshot the buffer cells and store them in the previous frame buffer
-        if (self.previous) |prev| self.allo.free(prev);
-        self.previous = try self.allo.dupe(Cell, self.buffer.inner);
     }
 
     pub fn render(self: *@This(), component: anytype) !void {

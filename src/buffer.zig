@@ -48,31 +48,16 @@ pub const Buffer = struct {
     }
 
     pub fn deinit(self: @This()) void {
-        for (0..self.inner.len) |i| {
-            self.inner[i].deinit(self.alloc);
-        }
         self.alloc.free(self.inner);
     }
 
     pub fn resize(self: *@This(), w: u16, h: u16) !void {
-        var buff = try self.alloc.alloc(Cell, @as(usize, @intCast(w)) * @as(usize, @intCast(h)));
-        for (0..buff.len) |i| {
-            buff[i] = .{};
-        }
-
-        for (0..self.height) |y| {
-            for (0..self.width) |x| {
-                const pos = (y * w) + x;
-                if (x >= w or y >= h) {
-                    self.inner[pos].deinit(self.alloc);
-                } else {
-                    buff[pos] = self.inner[pos];
-                }
-            }
-        }
-
         self.alloc.free(self.inner);
-        self.inner = buff;
+        self.inner = self.alloc.alloc(Cell, @intCast(w * h));
+        for (0..self.inner.len) |i| {
+            self.inner[i] = .{};
+        }
+
         self.width = w;
         self.height = h;
     }
@@ -145,12 +130,13 @@ pub const Buffer = struct {
         return &self.inner[pos];
     }
 
-    pub fn render(self: *const @This(), writer: anytype, previous: ?[]const Cell) !void {
+    pub fn render(self: *const @This(), writer: anytype, previous: []Cell) !void {
         var buffer = std.io.bufferedWriter(writer);
         var output = buffer.writer();
 
         var jump = false;
         var style: ?Style = null;
+
         try output.print("{s}", .{ Cursor { .col = 1, .row = 1 } });
         for (0..self.height) |h| {
             for (0..self.width) |w| {
@@ -158,29 +144,22 @@ pub const Buffer = struct {
                 if (pos >= self.inner.len) break;
 
                 const cell = &self.inner[pos];
-                if (previous) |prev| {
-                    const old_cell = &prev[pos];
-                    if (!cell.eql(old_cell)) {
-                        if (jump) {
-                            try output.print("{s}", .{ Cursor { .col = @intCast(w + 1), .row = @intCast(h + 1) } });
-                            jump = false;
-                        }
-                        if (!std.meta.eql(cell.style, style)) {
-                            if (style) |s| try output.print("{s}", .{ s.reset() });
-                            if (cell.style) |s| try output.print("{s}", .{ s });
-                            style = cell.style;
-                        }
-                        try cell.print(output);
-                    } else {
-                        jump = true;
+                const old_cell = &previous[pos];
+
+                if (!cell.eql(old_cell)) {
+                    if (jump) {
+                        try output.print("{s}", .{ Cursor { .col = @intCast(w + 1), .row = @intCast(h + 1) } });
+                        jump = false;
                     }
-                } else {
                     if (!std.meta.eql(cell.style, style)) {
                         if (style) |s| try output.print("{s}", .{ s.reset() });
                         if (cell.style) |s| try output.print("{s}", .{ s });
                         style = cell.style;
                     }
                     try cell.print(output);
+                    previous[pos] = cell.*;
+                } else {
+                    jump = true;
                 }
             }
 

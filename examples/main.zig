@@ -41,9 +41,10 @@ fn cleanup() !void {
 }
 
 pub fn main() !void {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allo = arena.allocator();
+    // Use debug allocator to help catch memory leaks
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allo = gpa.allocator();
 
     var term = try zuit.Terminal.init(allo, .Stdout);
     defer term.deinit();
