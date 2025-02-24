@@ -2,9 +2,7 @@ const std = @import("std");
 const termz = @import("termz");
 const zuit = @import("zuit");
 
-const Terminal = zuit.Terminal;
-const Buffer = zuit.Buffer;
-const Rect = zuit.Rect;
+const widget = zuit.widget;
 
 const Cursor = termz.action.Cursor;
 const Screen = termz.action.Screen;
@@ -47,7 +45,7 @@ pub fn main() !void {
     defer arena.deinit();
     const allo = arena.allocator();
 
-    var term = try Terminal.init(allo, .Stdout);
+    var term = try zuit.Terminal.init(allo, .Stdout);
     defer term.deinit();
 
     var stream = EventStream.init(allo);
@@ -66,7 +64,7 @@ pub fn main() !void {
     var stamp = try std.time.Instant.now();
     var i: usize = 0;
     while (true) {
-        if (i > 10) break;
+        if (i > 11) break;
 
         if (try stream.parseEvent()) |event| {
             switch (event) {
@@ -94,118 +92,41 @@ pub fn main() !void {
 const App = struct {
     message: ?[]const u8 = null,
 
-    pub fn render_with_state(self: *@This(), buffer: *Buffer, rect: Rect, state: *usize) !void {
-        var block = Block.bordered()
-            .border_set(if (state.* % 2 == 0) Border.ROUNDED else Border.DOUBLE);
+    pub fn render_with_state(self: *@This(), buffer: *zuit.Buffer, rect: zuit.Rect, state: *usize) !void {
+        const color = switch (state.* % 6) {
+            0 => Color.Red,
+            1 => Color.Green,
+            2 => Color.Yellow,
+            3 => Color.Blue,
+            4 => Color.Magenta,
+            else => Color.Cyan,
+        };
+
+        var block = widget.Block {
+            .borders = widget.Borders.all(),
+            .set = @as(widget.BorderType, @enumFromInt(state.* % widget.BorderType.count())).set(),
+            .padding = widget.Padding.proportional(8),
+            .border_style = .{ .bg = color, .fg = Color.black, .reverse = true },
+            .style = .{ .bg = Color.black },
+        };
 
         try block.render(buffer, rect);
         const inner = block.inner(rect);
 
+        try (widget.Block {
+            .borders = widget.Borders.all(),
+            .border_style = .{ .bg = Color.Default },
+            .style = .{ .bg = Color.Default },
+        }).render(buffer, inner);
+
         if (self.message) |message| {
+            // try buffer.setFormatted(x: u16, y: u16, item: anytype, style: ?Style)
             try buffer.setSlice(
-                @divFloor(inner.width, 2) - @as(u16, @intCast(@divFloor(message.len, 2))),
-                @divFloor(inner.height, 2),
+                inner.x + @divFloor(inner.width, 2) - @as(u16, @intCast(@divFloor(message.len, 2))),
+                inner.y + @divFloor(inner.height, 2),
                 message,
-                Style { .fg = switch (state.* % 6) {
-                    0 => Color.Red,
-                    1 => Color.Green,
-                    2 => Color.Yellow,
-                    3 => Color.Blue,
-                    4 => Color.Magenta,
-                    else => Color.Cyan,
-                }},
+                .{ .fg = color },
             );
         }
-    }
-};
-
-pub const Border = struct {
-    top_left: u21,
-    top_right: u21,
-    bottom_left: u21,
-    bottom_right: u21,
-    left: u21,
-    right: u21,
-    top: u21,
-    bottom: u21,
-
-    pub const ROUNDED: @This() = .{
-        .top_left = '╭',
-        .top_right = '╮',
-        .bottom_left = '╰',
-        .bottom_right = '╯',
-        .left = '│',
-        .right = '│',
-        .top = '─',
-        .bottom = '─',
-    };
-
-    pub const SINGLE: @This() = .{
-        .top_left = '┌',
-        .top_right = '┐',
-        .bottom_left = '└',
-        .bottom_right = '┘',
-        .left = '│',
-        .right = '│',
-        .top = '─',
-        .bottom = '─',
-    };
-
-    pub const DOUBLE: @This() = .{
-        .top_left = '╔',
-        .top_right = '╗',
-        .bottom_left = '╚',
-        .bottom_right = '╝',
-        .left = '║',
-        .right = '║',
-        .top = '═',
-        .bottom = '═',
-    };
-};
-
-const Block = struct {
-    border_style: Border = Border.SINGLE,
-    border: bool = false,
-
-    pub fn init() @This() {
-        return .{};
-    }
-
-    pub fn bordered() @This() {
-        return .{ .border = true };
-    }
-
-    pub fn border_set(self: @This(), style: Border) @This() {
-        return .{
-            .border = self.border,
-            .border_style = style
-        };
-    }
-
-    pub fn inner(self: *const @This(), rect: Rect) Rect {
-        if (self.border) {
-            return Rect {
-                .x = rect.x + 1,
-                .y = rect.y + 1,
-                .width = rect.width - 2,
-                .height = rect.height - 2
-            };
-        }
-        return rect;
-    }
-
-    pub fn render(self: *@This(), buffer: *Buffer, rect: Rect) !void {
-        try buffer.set(0, 0, self.border_style.top_left, null);
-        try buffer.setRepeatX(1, 0, rect.width-2, self.border_style.top, null);
-        try buffer.set(rect.width-1, 0, self.border_style.top_right, null);
-
-        for (1..rect.height-1) |i| {
-            try buffer.set(0, @intCast(i), self.border_style.left, null);
-            try buffer.set(rect.width-1, @intCast(i), self.border_style.right, null);
-        }
-
-        try buffer.set(0, rect.height-1, self.border_style.bottom_left, null);
-        try buffer.setRepeatX(1, rect.height-1, rect.width-2, self.border_style.bottom, null);
-        try buffer.set(rect.width-1, rect.height-1, self.border_style.bottom_right, null);
     }
 };

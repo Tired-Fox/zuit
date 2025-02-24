@@ -3,8 +3,13 @@ const std = @import("std");
 const Style = @import("termz").style.Style;
 const Cursor = @import("termz").action.Cursor;
 const Source = @import("termz").Source;
-
 const getTermSize = @import("termz").action.getTermSize;
+
+pub const buffer = @import("./buffer.zig");
+pub const widget = @import("./widget.zig");
+
+pub const Buffer = buffer.Buffer;
+pub const Cell = buffer.Cell;
 
 pub const Terminal = struct {
     allo: std.mem.Allocator,
@@ -91,7 +96,7 @@ pub const Terminal = struct {
     }
 };
 
-fn render_component_with_state(buffer: *Buffer, rect: Rect, component: anytype, state: anytype, style: ?Style) !void {
+fn render_component_with_state(buff: *Buffer, rect: Rect, component: anytype, state: anytype, style: ?Style) !void {
     const T = @TypeOf(component);
     const info = @typeInfo(T);
 
@@ -99,40 +104,42 @@ fn render_component_with_state(buffer: *Buffer, rect: Rect, component: anytype, 
         .Struct => {
             switch (std.meta.fields(T)) {
                 .Struct, .Enum => if (@hasDecl(T, "render_with_state")) {
-                    try component.render_with_state(buffer, rect, state);
+                    try component.render_with_state(buff, rect, state);
+                } else if (@hasDecl(T, "render")) {
+                    try component.render(buff, rect);
                 },
                 .Union => |fields| inline for (fields) |field| {
-                    try render_component_with_state(buffer, @field(component, field.name), state, style);
+                    try render_component_with_state(buff, @field(component, field.name), state, style);
                 }
             }
         },
         .Pointer => |p| {
             switch (@typeInfo(p.child)) {
-                .Struct => {
-                    if (@hasDecl(p.child, "render_with_state")) {
-                        try component.render_with_state(buffer, rect, state);
-                    }
+                .Struct => if (@hasDecl(p.child, "render_with_state")) {
+                    try component.render_with_state(buff, rect, state);
+                } else if (@hasDecl(T, "render")) {
+                    try component.render(buff, rect);
                 },
                 else => {
                     switch (p.child) {
-                        []const u8 => try buffer.setSlice(0, 0, component, style),
-                        u21, u8, u32, u16, comptime_int => try buffer.set(0, 0, component, style),
-                        else => try buffer.setFormatable(0, 0, component, style),
+                        []const u8 => try buff.setSlice(0, 0, component, style),
+                        u21, u8, u32, u16, comptime_int => try buff.set(0, 0, component, style),
+                        else => try buff.setFormatable(0, 0, component, style),
                     }
                 }
             }
         },
         else => {
             switch (T) {
-                []const u8 => try buffer.setSlice(0, 0, component, style),
-                u21, u8, u32, u16, comptime_int => try buffer.set(0, 0, component, style),
-                else => try buffer.setFormatable(0, 0, component, style),
+                []const u8 => try buff.setSlice(0, 0, component, style),
+                u21, u8, u32, u16, comptime_int => try buff.set(0, 0, component, style),
+                else => try buff.setFormatable(0, 0, component, style),
             }
         }
     }
 }
 
-fn render_component(buffer: *Buffer, rect: Rect, component: anytype, style: ?Style) !void {
+fn render_component(buff: *Buffer, rect: Rect, component: anytype, style: ?Style) !void {
     const T = @TypeOf(component);
     const info = @typeInfo(T);
 
@@ -140,10 +147,10 @@ fn render_component(buffer: *Buffer, rect: Rect, component: anytype, style: ?Sty
         .Struct => {
             switch (std.meta.fields(T)) {
                 .Struct, .Enum => if (@hasDecl(T, "render")) {
-                    try component.render(buffer, rect);
+                    try component.render(buff, rect);
                 },
                 .Union => |fields| inline for (fields) |field| {
-                    try render_component(buffer, @field(component, field.name), style);
+                    try render_component(buff, @field(component, field.name), style);
                 }
             }
         },
@@ -151,23 +158,23 @@ fn render_component(buffer: *Buffer, rect: Rect, component: anytype, style: ?Sty
             switch (@typeInfo(p.child)) {
                 .Struct => {
                     if (@hasDecl(p.child, "render")) {
-                        try component.render(buffer, rect);
+                        try component.render(buff, rect);
                     }
                 },
                 else => {
                     switch (p.child) {
-                        []const u8 => try buffer.setSlice(0, 0, component, style),
-                        u21, u8, u32, u16, comptime_int => try buffer.set(0, 0, component, style),
-                        else => try buffer.setFormatable(0, 0, component, style),
+                        []const u8 => try buff.setSlice(0, 0, component, style),
+                        u21, u8, u32, u16, comptime_int => try buff.set(0, 0, component, style),
+                        else => try buff.setFormatable(0, 0, component, style),
                     }
                 }
             }
         },
         else => {
             switch (T) {
-                []const u8 => try buffer.setSlice(0, 0, component, style),
-                u21, u8, u32, u16, comptime_int => try buffer.set(0, 0, component, style),
-                else => try buffer.setFormatable(0, 0, component, style),
+                []const u8 => try buff.setSlice(0, 0, component, style),
+                u21, u8, u32, u16, comptime_int => try buff.set(0, 0, component, style),
+                else => try buff.setFormatable(0, 0, component, style),
             }
         }
     }
@@ -182,8 +189,8 @@ pub fn Styled(T: type) type {
             return .{ .value = value, .style = style };
         }
 
-        pub fn render(self: *@This(), buffer: *Buffer, rect: Rect) !void {
-            render_component(buffer, rect, self.value, self.style);
+        pub fn render(self: *@This(), buff: *Buffer, rect: Rect) !void {
+            render_component(buff, rect, self.value, self.style);
         }
     };
 }
@@ -193,221 +200,4 @@ pub const Rect = struct {
     y: u16 = 0,
     width: u16 = 0,
     height: u16 = 0,
-};
-
-pub const Cell = struct {
-    symbol: ?[]const u8 = null,
-    style: ?Style = null,
-
-    pub fn deinit(self: *@This(), alloc: std.mem.Allocator) void {
-        if (self.symbol) |symbol| {
-            alloc.free(symbol);
-        }
-    }
-
-    pub fn eql(self: *const @This(), other: *const @This()) bool {
-        if (!std.meta.eql(self.style, other.style)) return false;
-        if (self.symbol != null and other.symbol != null) return std.mem.eql(u8, self.symbol.?, other.symbol.?);
-        return self.symbol == null and self.symbol == null;
-    }
-
-    pub fn clone(self: *@This(), alloc: std.mem.Allocator) !@This() {
-        var s: ?[]u8 = null;
-        if (self.symbol) |symbol| {
-            s = try alloc.dupe(u8, symbol);
-        }
-        return .{
-            .symbol = s,
-            .style = self.style,
-        };
-    }
-
-    pub fn print(self: @This(), writer: anytype) !void {
-        if (self.symbol) |symbol| {
-            try writer.print("{s}", .{symbol});
-        } else {
-            try writer.writeByte(' ');
-        }
-    }
-};
-
-pub const Buffer = struct {
-    alloc: std.mem.Allocator,
-
-    inner: []Cell,
-
-    width: u16,
-    height: u16,
-
-    pub fn init(alloc: std.mem.Allocator, width: u16, height: u16) !@This() {
-        var buff = try alloc.alloc(Cell, @as(usize, @intCast(width)) * @as(usize, @intCast(height)));
-        for (0..buff.len) |i| {
-            buff[i] = .{};
-        }
-
-        return .{
-            .inner = buff,
-            .alloc = alloc,
-            .width = width,
-            .height = height,
-        };
-    }
-
-    pub fn deinit(self: @This()) void {
-        for (0..self.inner.len) |i| {
-            self.inner[i].deinit(self.alloc);
-        }
-        self.alloc.free(self.inner);
-    }
-
-    pub fn resize(self: *@This(), w: u16, h: u16) !void {
-        var buff = try self.alloc.alloc(Cell, @as(usize, @intCast(w)) * @as(usize, @intCast(h)));
-        for (0..buff.len) |i| {
-            buff[i] = .{};
-        }
-
-        for (0..self.height) |y| {
-            for (0..self.width) |x| {
-                const pos = (y * w) + x;
-                if (x >= w or y >= h) {
-                    self.inner[pos].deinit(self.alloc);
-                } else {
-                    buff[pos] = self.inner[pos];
-                }
-            }
-        }
-
-        self.alloc.free(self.inner);
-        self.inner = buff;
-        self.width = w;
-        self.height = h;
-    }
-
-    pub fn set(self: *@This(), x: u16, y: u16, char: anytype, style: ?Style) !void {
-        const pos: usize = @intCast((y * self.width) + x);
-        if (pos >= self.inner.len) return error.OutOfBounds;
-
-        var item = &self.inner[pos];
-
-        switch (@TypeOf(char)) {
-            u8 => {
-                if (item.symbol) |symbol| self.alloc.free(symbol);
-                var buffer = try self.alloc.alloc(u8, 1);
-                buffer[0] = char;
-                item.symbol = buffer;
-            },
-            u16 => {
-                var buffer = std.ArrayList(u8).init(self.alloc);
-                var it = std.unicode.Utf16LeIterator.init([1]u16{ char });
-                while (try it.nextCodepoint()) |cp| {
-                    var buff: [4]u8 = undefined;
-                    const length = try std.unicode.utf8Encode(cp, &buff);
-                    try buffer.appendSlice(buff[0..length]);
-                }
-
-                if (item.symbol) |*symbol| self.alloc.free(symbol);
-                item.symbol = try buffer.toOwnedSlice();
-            },
-            u21, u32, comptime_int => {
-                var buffer = std.ArrayList(u8).init(self.alloc);
-
-                var buff: [4]u8 = [_]u8{0}**4;
-                const length = try std.unicode.utf8Encode(@intCast(char), &buff);
-                try buffer.appendSlice(buff[0..length]);
-
-                if (item.symbol) |symbol| self.alloc.free(symbol);
-                item.symbol = try buffer.toOwnedSlice();
-            },
-            else => @compileError("type not supported as a buffer cell")
-        }
-
-        if (style) |s| {
-            item.style = s;
-        }
-    }
-
-    pub fn setFormatable(self: *@This(), x: u16, y: u16, item: anytype, style: ?Style) !void {
-        const pos: usize = @intCast((y * self.width) + x);
-        if (pos >= self.inner.len) return error.OutOfBounds;
-
-        var buffer = std.ArrayList(u8).init(self.alloc);
-        defer buffer.deinit();
-        try buffer.writer().print("{s}", .{ item });
-
-        try self.setSlice(x, y, buffer.items, style);
-    }
-
-    pub fn setSlice(self: *@This(), x: u16, y: u16, slice: []const u8, style: ?Style) !void {
-        for (0..slice.len) |i| {
-            try self.set(x + @as(u16, @intCast(i)), y, slice[i], style);
-        }
-    }
-
-    pub fn setRepeatX(self: *@This(), x: u16, y: u16, count: usize, char: anytype, style: ?Style) !void {
-        for (0..count) |i| {
-            try self.set(x + @as(u16, @intCast(i)), y, char, style);
-        }
-    }
-
-    pub fn setRepeatY(self: *@This(), x: u16, y: u16, count: usize, char: anytype, style: ?Style) !void {
-        for (0..count) |i| {
-            try self.set(x, y + @as(u16, @intCast(i)), char, style);
-        }
-    }
-
-    pub fn get(self: *const @This(), x: u16, y: u16) ?*const Cell {
-        const pos: usize = @intCast((y * self.width) + x);
-        if (pos >= self.inner.len) return null;
-
-        return &self.inner[pos];
-    }
-
-    pub fn render(self: *const @This(), writer: anytype, previous: ?[]const Cell) !void {
-        var buffer = std.io.bufferedWriter(writer);
-        var output = buffer.writer();
-
-        var jump = false;
-        var style: ?Style = null;
-        try output.print("{s}", .{ Cursor { .col = 1, .row = 1 } });
-        for (0..self.height) |h| {
-            for (0..self.width) |w| {
-                const pos: usize = @intCast((h * self.width) + w);
-                if (pos >= self.inner.len) break;
-
-                const cell = &self.inner[pos];
-                if (previous) |prev| {
-                    const old_cell = &prev[pos];
-                    if (!cell.eql(old_cell)) {
-                        if (jump) {
-                            try output.print("{s}", .{ Cursor { .col = @intCast(w + 1), .row = @intCast(h + 1) } });
-                            jump = false;
-                        }
-                        if (!std.meta.eql(cell.style, style)) {
-                            if (style) |s| try output.print("{s}", .{ s.reset() });
-                            if (cell.style) |s| try output.print("{s}", .{ s });
-                            style = cell.style;
-                        }
-                        try cell.print(output);
-                    } else {
-                        jump = true;
-                    }
-                } else {
-                    if (!std.meta.eql(cell.style, style)) {
-                        if (style) |s| try output.print("{s}", .{ s.reset() });
-                        if (cell.style) |s| try output.print("{s}", .{ s });
-                        style = cell.style;
-                    }
-                    try cell.print(output);
-                }
-            }
-
-            if (h < self.height-1 and !jump) {
-                try output.print("\r\n", .{});
-            }
-        }
-
-        if (style) |s| try output.print("{s}", .{ s.reset() });
-
-        try buffer.flush();
-    }
 };
