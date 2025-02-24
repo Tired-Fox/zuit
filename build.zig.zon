@@ -1,0 +1,18 @@
+.{
+    .name = "zuit",
+    .version = "0.0.1",
+    .minimum_zig_version = "0.13.0",
+    .dependencies = .{
+        .termz = .{
+            .url = "git+https://github.com/Tired-Fox/termz#3dbb0ec306d5e7bcf6cd6a6fc8846402e16dc73e",
+            .hash = "1220cc19a8eb5bd3145f0ae3a9ad21b2b0b390c817c6d0140898fba6a8f438575d42",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "LICENSE",
+        "README.md",
+    },
+}
