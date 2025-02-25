@@ -63,9 +63,7 @@ pub fn main() !void {
     errdefer _ = Screen.disableRawMode() catch { std.log.err("error disabling raw mode", .{}); };
     defer cleanup() catch { std.log.err("error cleaning up terminal", .{}); };
 
-    const app = App {};
-
-    try term.render(&app);
+    var app = App{};
 
     while (true) {
         if (try stream.parseEvent()) |event| {
@@ -74,24 +72,49 @@ pub fn main() !void {
                     if (key.matches(.{ .code = KeyCode.char('q') })) break;
                     if (key.matches(.{ .code = KeyCode.char('c'), .ctrl = true })) break;
                     if (key.matches(.{ .code = KeyCode.char('C'), .ctrl = true })) break;
+
+                    switch (key.code) {
+                        .char => |last| app.last_char = last,
+                        else => {},
+                    }
                 },
                 else => {}
             }
         }
+
+        try term.render(&app);
     }
 }
 
 const App = struct {
-    pub fn render(self: *const @This(), buffer: *zuit.Buffer, area: zuit.Rect) !void {
-        _ = self;
+    last_char: ?u21 = null,
 
-        const vert = widget.Layout(2).vertical(.{
-            widget.Constraint.length(1),
+    pub fn render(self: *const @This(), area: zuit.Rect, buffer: *zuit.Buffer, allo: std.mem.Allocator) !void {
+        var top_center: []u8 = "";
+        if (self.last_char) |last| {
+            var buff: [4]u8 = undefined;
+            const len = try std.unicode.utf8Encode(last, &buff);
+            top_center = try std.fmt.allocPrint(allo, "Key: {s}", .{ buff[0..@intCast(len)] });
+        }
+
+        const block = widget.Block {
+            .borders = widget.Borders.all(),
+            .titles = .{
+                .top_left = "TopLeft",
+                .top_center = top_center,
+                .top_right = "TopRight",
+                .bottom_left = "BottomLeft",
+                .bottom_center = "BottomCenter",
+                .bottom_right = "BottomRight",
+            },
+        };
+        try block.render(buffer, area);
+
+        const vert = widget.Layout(3).vertical(.{
+            widget.Constraint.fill(1),
             widget.Constraint.length(3),
-        }).split(area);
-
-        const cols, const rows = try getTermSize();
-        try buffer.setFormatted(vert[0].x, vert[0].y, null, "{d} x {d} {any}", .{ cols, rows, vert[1] });
+            widget.Constraint.fill(1),
+        }).split(block.inner(area));
 
         const constraints = [_]widget.Constraint{
             widget.Constraint.min(10),
@@ -102,16 +125,12 @@ const App = struct {
         };
 
         const hoz = widget.Layout(5).horizontal(&constraints).split(vert[1]);
-        for (0..hoz.len) |i| {
-            try buffer.setFormatted(area.x, area.y + 4 + @as(u16, @intCast(i)), null, "{any}", .{ hoz[i] });
-        }
-
         for (hoz) |a| {
-            const block = widget.Block {
+            const container = widget.Block {
                 .borders = widget.Borders.all(),
             };
-            try block.render(buffer, a);
-            const inner = block.inner(a);
+            try container.render(buffer, a);
+            const inner = container.inner(a);
 
             try buffer.setFormatted(inner.x, inner.y, null, "{d}", .{ a.width });
         }

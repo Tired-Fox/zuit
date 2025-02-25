@@ -86,7 +86,7 @@ pub fn main() !void {
             stamp = try std.time.Instant.now();
         }
 
-        try term.render_with_state(&app, &i);
+        try term.renderWithState(&app, &i);
         if (i % 5 == 0) try term.render(widget.Clear);
     }
 }
@@ -94,7 +94,7 @@ pub fn main() !void {
 const App = struct {
     message: ?[]const u8 = null,
 
-    pub fn render_with_state(self: *@This(), buffer: *zuit.Buffer, rect: zuit.Rect, state: *usize) !void {
+    pub fn renderWithState(self: *@This(), buffer: *zuit.Buffer, rect: zuit.Rect, state: *usize) !void {
         const color = switch (state.* % 6) {
             0 => Color.Red,
             1 => Color.Green,
