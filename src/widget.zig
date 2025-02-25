@@ -7,6 +7,9 @@
 /// and padding are applied.
 pub const Block = @import("./widget/block.zig");
 
+pub const Layout = @import("./widget/layout.zig").Layout;
+pub const Constraint = @import("./widget/layout.zig").Constraint;
+
 
 /// Flags to determine which borders are active/shown
 pub const Borders = packed struct(u4) {
