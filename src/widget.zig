@@ -10,6 +10,9 @@ pub const Block = @import("./widget/block.zig");
 pub const Layout = @import("./widget/layout.zig").Layout;
 pub const Constraint = @import("./widget/layout.zig").Constraint;
 
+pub const Buffer = @import("./root.zig").Buffer;
+pub const Rect = @import("./root.zig").Rect;
+
 
 /// Flags to determine which borders are active/shown
 pub const Borders = packed struct(u4) {
@@ -255,3 +258,11 @@ pub const Padding = struct {
     /// Only apply the padding to the `right`
     pub fn right(size: u16) @This() { return .{ .right = size }; }
 };
+
+/// Widget that when rendered will clear the area it is rendered to.
+pub const Clear = struct {
+    fn render(self: *const @This(), buffer: *Buffer, rect: Rect) !void {
+        _ = self;
+        try buffer.fill(rect, ' ', null);
+    }
+}{};

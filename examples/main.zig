@@ -87,6 +87,7 @@ pub fn main() !void {
         }
 
         try term.render_with_state(&app, &i);
+        if (i % 5 == 0) try term.render(widget.Clear);
     }
 }
 

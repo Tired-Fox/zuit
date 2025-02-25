@@ -4,6 +4,8 @@ const termz = @import("termz");
 const Style = termz.style.Style;
 const Cursor = termz.action.Cursor;
 
+const Rect = @import("./root.zig").Rect;
+
 pub const Cell = struct {
     symbol: ?[4]u8 = null,
     style: ?Style = null,
@@ -30,11 +32,11 @@ pub const Buffer = struct {
 
     inner: []Cell,
 
-    width: u16,
-    height: u16,
+    /// Area that this buffer represents
+    area: Rect,
 
-    pub fn init(alloc: std.mem.Allocator, width: u16, height: u16) !@This() {
-        var buff = try alloc.alloc(Cell, @as(usize, @intCast(width)) * @as(usize, @intCast(height)));
+    pub fn init(alloc: std.mem.Allocator, area: Rect) !@This() {
+        var buff = try alloc.alloc(Cell, @as(usize, @intCast(area.width * area.height)));
         for (0..buff.len) |i| {
             buff[i] = .{};
         }
@@ -42,8 +44,7 @@ pub const Buffer = struct {
         return .{
             .inner = buff,
             .alloc = alloc,
-            .width = width,
-            .height = height,
+            .area = area,
         };
     }
 
@@ -51,19 +52,18 @@ pub const Buffer = struct {
         self.alloc.free(self.inner);
     }
 
-    pub fn resize(self: *@This(), w: u16, h: u16) !void {
+    pub fn resize(self: *@This(), area: Rect) !void {
         self.alloc.free(self.inner);
-        self.inner = self.alloc.alloc(Cell, @intCast(w * h));
+        self.inner = self.alloc.alloc(Cell, @intCast(area.width * area.height));
         for (0..self.inner.len) |i| {
             self.inner[i] = .{};
         }
 
-        self.width = w;
-        self.height = h;
+        self.area = area;
     }
 
     pub fn set(self: *@This(), x: u16, y: u16, char: anytype, style: ?Style) !void {
-        const pos: usize = @intCast((y * self.width) + x);
+        const pos: usize = @intCast((y * self.area.width) + x);
         if (pos >= self.inner.len) return error.OutOfBounds;
 
         var item = &self.inner[pos];
@@ -83,26 +83,52 @@ pub const Buffer = struct {
         }
     }
 
-    pub fn setFormatable(self: *@This(), x: u16, y: u16, item: anytype, style: ?Style) !void {
-        const pos: usize = @intCast((y * self.width) + x);
-        if (pos >= self.inner.len) return error.OutOfBounds;
-
-        var buffer = std.ArrayList(u8).init(self.alloc);
-        defer buffer.deinit();
-        try buffer.writer().print("{s}", .{ item });
-
-        try self.setSlice(x, y, buffer.items, style);
+    pub fn fill(self: *@This(), area: Rect, char: anytype, style: ?Style) !void {
+        for (area.x..area.x+area.width) |w| {
+            for (area.y..area.y+area.height) |h| {
+                try self.set(w, h, char, style);
+            }
+        }
     }
 
-    pub fn setFormatted(self: *@This(), x: u16, y: u16, style: ?Style, fmt: []const u8, args: anytype) !void {
-        const pos: usize = @intCast((y * self.width) + x);
+    const WriterContext = struct {
+        buffer: *Buffer,
+        area: Rect,
+        style: ?Style,
+    };
+
+    const Writer = std.io.Writer(
+        *WriterContext,
+        anyerror,
+        appendWrite
+    );
+
+    fn appendWrite(ctx: *WriterContext, data: []const u8) !usize {
+        if (ctx.area.x + data.len > ctx.area.x + ctx.area.width) {
+            return error.EndOfBuffer;
+        }
+
+        for (data, 0..) |c, i| {
+            try ctx.buffer.set(ctx.area.x + @as(u16, @intCast(i)), ctx.area.y, c, ctx.style);
+        }
+
+        ctx.area.x +|= @as(u16, @intCast(data.len));
+
+        return data.len;
+    }
+
+    pub fn setFormatted(self: *@This(), x: u16, y: u16, style: ?Style, comptime fmt: []const u8, args: anytype) !void {
+        const pos: usize = @intCast((y * self.area.width) + x);
         if (pos >= self.inner.len) return error.OutOfBounds;
 
-        var buffer = std.ArrayList(u8).init(self.alloc);
-        defer buffer.deinit();
-        try buffer.writer().print(fmt, args);
+        var context = WriterContext {
+            .buffer = self,
+            .area = Rect { .x = x, .y = y, .width = self.area.width, .height = self.area.height },
+            .style = style,
+        };
+        const writer = Writer { .context = &context };
 
-        try self.setSlice(x, y, buffer.items, style);
+        try writer.print(fmt, args);
     }
 
     pub fn setSlice(self: *@This(), x: u16, y: u16, slice: []const u8, style: ?Style) !void {
@@ -124,7 +150,7 @@ pub const Buffer = struct {
     }
 
     pub fn get(self: *const @This(), x: u16, y: u16) ?*const Cell {
-        const pos: usize = @intCast((y * self.width) + x);
+        const pos: usize = @intCast((y * self.area.width) + x);
         if (pos >= self.inner.len) return null;
 
         return &self.inner[pos];
@@ -137,10 +163,10 @@ pub const Buffer = struct {
         var jump = false;
         var style: ?Style = null;
 
-        try output.print("{s}", .{ Cursor { .col = 1, .row = 1 } });
-        for (0..self.height) |h| {
-            for (0..self.width) |w| {
-                const pos: usize = @intCast((h * self.width) + w);
+        try output.print("{s}", .{ Cursor { .col = self.area.x, .row = self.area.y } });
+        for (0..self.area.height) |h| {
+            for (0..self.area.width) |w| {
+                const pos: usize = @intCast((h * self.area.width) + w);
                 if (pos >= self.inner.len) break;
 
                 const cell = &self.inner[pos];
@@ -148,7 +174,10 @@ pub const Buffer = struct {
 
                 if (!cell.eql(old_cell)) {
                     if (jump) {
-                        try output.print("{s}", .{ Cursor { .col = @intCast(w + 1), .row = @intCast(h + 1) } });
+                        try output.print("{s}", .{ Cursor {
+                            .col = self.area.x + @as(u16, @intCast(w + 1)),
+                            .row = self.area.y + @as(u16, @intCast(h + 1))
+                        }});
                         jump = false;
                     }
                     if (!std.meta.eql(cell.style, style)) {
@@ -163,7 +192,7 @@ pub const Buffer = struct {
                 }
             }
 
-            if (h < self.height-1 and !jump) {
+            if (h < self.area.height-1 and !jump) {
                 try output.print("\r\n", .{});
             }
         }

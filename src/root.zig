@@ -14,6 +14,7 @@ pub const Cell = buffer.Cell;
 pub const Terminal = struct {
     allo: std.mem.Allocator,
     source: std.fs.File,
+
     buffer: Buffer,
 
     previous: []Cell,
@@ -21,7 +22,7 @@ pub const Terminal = struct {
     pub fn init(allo: std.mem.Allocator, source: Source) !@This() {
         const cols, const rows = try getTermSize();
         return .{
-            .buffer = try Buffer.init(allo, cols, rows),
+            .buffer = try Buffer.init(allo, Rect{ .width = cols, .height = rows }),
             .previous = try allo.alloc(Cell, @intCast(cols * rows)),
             .source = if (source == .Stdout) std.io.getStdOut() else std.io.getStdErr(),
             .allo = allo,
@@ -41,8 +42,7 @@ pub const Terminal = struct {
 
     pub fn render_with_state(self: *@This(), component: anytype, state: anytype) !void {
         // Call render function on component(s)
-        const area = Rect { .width = self.buffer.width, .height = self.buffer.height };
-        try render_component_with_state(&self.buffer, area, component, state, null);
+        try render_component_with_state(&self.buffer, self.buffer.area, component, state, null);
 
         // Render buffer iterating previous at the same time
         try self.buffer.render(self.source.writer(), self.previous);
@@ -50,15 +50,10 @@ pub const Terminal = struct {
 
     pub fn render(self: *@This(), component: anytype) !void {
         // Call render function on component(s)
-        const area = Rect { .width = self.buffer.width, .height = self.buffer.height };
-        try render_component(&self.buffer, area, component, null);
+        try render_component(&self.buffer, self.buffer.area, component, null);
 
         // Render buffer iterating previous at the same time
         try self.buffer.render(self.source.writer(), self.previous);
-
-        // Snapshot the buffer cells and store them in the previous frame buffer
-        if (self.previous) |prev| self.allo.free(prev);
-        self.previous = try self.allo.dupe(Cell, self.buffer.inner);
     }
 };
 
@@ -90,7 +85,7 @@ fn render_component_with_state(buff: *Buffer, rect: Rect, component: anytype, st
                     switch (p.child) {
                         []const u8 => try buff.setSlice(0, 0, component, style),
                         u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
-                        else => try buff.setFormatable(0, 0, component, style),
+                        else => @compileError(@typeName(T) ++ " does not support rendering"),
                     }
                 }
             }
@@ -99,7 +94,7 @@ fn render_component_with_state(buff: *Buffer, rect: Rect, component: anytype, st
             switch (T) {
                 []const u8 => try buff.setSlice(0, 0, component, style),
                 u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
-                else => try buff.setFormatable(0, 0, component, style),
+                else => @compileError(@typeName(T) ++ " does not support rendering"),
             }
         }
     }
@@ -131,7 +126,7 @@ fn render_component(buff: *Buffer, rect: Rect, component: anytype, style: ?Style
                     switch (p.child) {
                         []const u8 => try buff.setSlice(0, 0, component, style),
                         u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
-                        else => try buff.setFormatable(0, 0, component, style),
+                        else => @compileError(@typeName(T) ++ " does not support rendering"),
                     }
                 }
             }
@@ -140,7 +135,7 @@ fn render_component(buff: *Buffer, rect: Rect, component: anytype, style: ?Style
             switch (T) {
                 []const u8 => try buff.setSlice(0, 0, component, style),
                 u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
-                else => try buff.setFormatable(0, 0, component, style),
+                else => @compileError(@typeName(T) ++ " does not support rendering"),
             }
         }
     }

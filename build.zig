@@ -9,6 +9,7 @@ const Example = struct {
 const examples = [_]Example {
     .{ .name = "main", .path = "examples/main.zig",  },
     .{ .name = "layout", .path = "examples/layout.zig",  },
+    .{ .name = "test", .path = "examples/test.zig",  },
 };
 
 pub fn build(b: *std.Build) void {

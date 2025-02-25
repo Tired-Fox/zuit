@@ -30,11 +30,29 @@ pub fn Layout(comptime N: usize) type {
             const tag_a = std.meta.activeTag(context[a]);
             const tag_b = std.meta.activeTag(context[b]);
 
-            if (tag_b == .max and tag_a != .max) return true;
-            if (tag_b == .min and tag_a != .max and tag_a != .min) return true;
-            if (tag_b == .fill and tag_a != .max and tag_a != .min and tag_a != .fill) return true;
-
-            return false;
+            return switch (tag_a) {
+                .max => switch (tag_b) {
+                    .max => false,
+                    else => true,
+                },
+                .min => switch (tag_b) {
+                    .max, .min => false,
+                    else => true,
+                },
+                .fill => switch (tag_b) {
+                    .max, .min, .fill => false,
+                    else => true,
+                },
+                .length => switch (tag_b) {
+                    .max, .min, .fill, .length => false,
+                    else => true,
+                },
+                .percentage => switch (tag_b) {
+                    .max, .min, .fill, .length, .percentage => false,
+                    else => true,
+                },
+                .ratio => false,
+            };
         }
 
         pub fn split(self: *const @This(), area: Rect) [N]Rect {
@@ -46,6 +64,7 @@ pub fn Layout(comptime N: usize) type {
             var remaining: u16 = @intCast(size);
             var sizes = [_]u16{ 0 } ** N;
             var indexes = [_]usize { 0 } ** N;
+            var mins: u16 = 0;
 
             var total_fill: u16 = 0;
             for (self.constraints, 0..) |constraint, i| {
@@ -73,6 +92,7 @@ pub fn Layout(comptime N: usize) type {
                     .min => |min| {
                         sizes[i] = if (remaining -| min == 0) remaining else min;
                         remaining -|= min;
+                        mins +|= min;
                         total_fill +|= 1;
                     },
                     // Leave max and fill at `0` since they only fill remaining space
@@ -84,7 +104,9 @@ pub fn Layout(comptime N: usize) type {
             if (remaining > 0 and total_fill > 0) {
                 std.mem.sort(usize, &indexes, &self.constraints, cmpConstraint);
 
-                var per = @divFloor(remaining, total_fill);
+                var per = @divFloor(remaining + mins, total_fill);
+                var overlap = (remaining + mins) % total_fill;
+                var overlap_step: u16 = @intFromFloat(@ceil(@as(f32, @floatFromInt(overlap)) / @as(f32, @floatFromInt(total_fill))));
 
                 for (self.constraints, 0..) |constraint, i| {
                     switch (constraint) {
@@ -92,11 +114,31 @@ pub fn Layout(comptime N: usize) type {
                             // Max will fill entire space up to max
                             sizes[i] = if (remaining -| max == 0) remaining else max;
                             remaining -|= max;
-                            per = @divFloor(remaining, total_fill);
                         },
+                        .min => |min| if (min >= per) {
+                            sizes[i] = min;
+                            mins -= min;
+                            total_fill -= 1;
+                        },
+                        else => {}
+                    }
+                }
+
+                per = @divFloor(remaining + mins, total_fill);
+                overlap = (remaining + mins) % total_fill;
+                overlap_step = @intFromFloat(@ceil(@as(f32, @floatFromInt(overlap)) / @as(f32, @floatFromInt(total_fill))));
+
+                for (indexes) |i| {
+                    const constraint = self.constraints[i];
+                    switch (constraint) {
                         .min => |min| if (min < per) {
                             sizes[i] = per;
-                            remaining -|= per;
+                            remaining -|= per - min;
+                            if (overlap > 0) {
+                                sizes[i] +|= 1;
+                                overlap -|= overlap_step;
+                                remaining -|= overlap_step;
+                            }
                         },
                         .fill => |fill| {
                             if (per == 0) {
@@ -104,6 +146,11 @@ pub fn Layout(comptime N: usize) type {
                                 remaining -|= 1;
                             } else {
                                 sizes[i] = per * fill;
+                                if (overlap > 0) {
+                                    sizes[i] +|= 1;
+                                    overlap -|= overlap_step;
+                                    remaining -|= overlap_step;
+                                }
                             }
                         },
                         else => {}
