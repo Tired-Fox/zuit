@@ -13,14 +13,7 @@ const Padding = widget.Padding;
 const Set = widget.Set;
 const BorderType = widget.BorderType;
 
-titles: struct {
-    top_left: ?[]const u8 = null,
-    top_center: ?[]const u8 = null,
-    top_right: ?[]const u8 = null,
-    bottom_left: ?[]const u8 = null,
-    bottom_center: ?[]const u8 = null,
-    bottom_right: ?[]const u8 = null,
-} = .{},
+titles: ?[]const widget.Title = null,
 title_pos: enum { TopLeft, TopCenter, TopRight, BottomLeft, BottomCenter, BottomRight } = .TopLeft,
 borders: Borders = .{},
 set: Set = Set.SINGLE,
@@ -28,6 +21,11 @@ padding: Padding = .{},
 
 border_style: ?Style = null,
 style: ?Style = null,
+
+/// Construct a block with all borders
+pub fn bordered() @This() {
+    return .{ .borders = Borders.all() };
+}
 
 /// Get the inner area of the block after applying the border and the padding
 pub fn inner(self: *const @This(), area: Rect) Rect {
@@ -43,6 +41,8 @@ pub fn inner(self: *const @This(), area: Rect) Rect {
 ///
 /// Also render the background styling if it is provided
 pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+    if (area.height == 0 or area.width == 0) return;
+
     if (self.borders.top) {
         // Top Left corner
         try buffer.set(area.x, area.y, if (self.borders.left) self.set.top_left else self.set.top, self.border_style);
@@ -55,8 +55,8 @@ pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
         try buffer.setRepeatX(area.x, area.y, area.width-|1, ' ', style);
     }
 
-    if (self.borders.left or self.borders.right) {
-        for (1..area.height-1) |i| {
+    if (area.height >= 2 and (self.borders.left or self.borders.right)) {
+        for (1..area.height-|1) |i| {
             // Left Edge
             if (self.borders.left) try buffer.set(area.x, area.y + @as(u16, @intCast(i)), self.set.left, self.border_style);
             // Fill background styling
@@ -79,36 +79,11 @@ pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
         try buffer.setRepeatX(area.x, area.y + area.height-|1, area.width-|1, ' ', style);
     }
 
-    if (self.borders.top) {
-        if (self.titles.top_left) |title| {
-            const x = self.borders.padding_left();
-            try buffer.setSlice(x, 0, title[0..@min(title.len, area.width -| 1)], self.border_style);
-        }
-        if (self.titles.top_center) |title| {
-            const x = @divFloor(area.width -| self.borders.padding_x(), 2) -| @divFloor(@as(u16, @intCast(title.len)), 2);
-            try buffer.setSlice(x, 0, title[0..@min(title.len, area.width -| 1)], self.border_style);
-        }
-        if (self.titles.top_right) |title| {
-            const x = area.width -| self.borders.padding_right() -| @as(u16, @intCast(title.len));
-            try buffer.setSlice(x, 0, title[0..@min(title.len, area.width -| 1)], self.border_style);
-        }
-    }
-
-    if (self.borders.bottom) {
-        if (self.titles.bottom_left) |title| {
-            const x = self.borders.padding_left();
-            const y = area.y + area.height -| 1;
-            try buffer.setSlice(x, y, title[0..@min(title.len, area.width -| 1)], self.border_style);
-        }
-        if (self.titles.bottom_center) |title| {
-            const x = @divFloor(area.width -| self.borders.padding_x(), 2) -| @divFloor(@as(u16, @intCast(title.len)), 2);
-            const y = area.y + area.height -| 1;
-            try buffer.setSlice(x, y, title[0..@min(title.len, area.width -| 1)], self.border_style);
-        }
-        if (self.titles.bottom_right) |title| {
-            const x = area.width -| self.borders.padding_right() -| @as(u16, @intCast(title.len));
-            const y = area.y + area.height -| 1;
-            try buffer.setSlice(x, y, title[0..@min(title.len, area.width -| 1)], self.border_style);
+    if (self.titles) |titles| {
+        const title_area = area.padded(.{ .left = self.borders.padding_left(), .right = self.borders.padding_right() });
+        for (titles) |title| {
+            if (title.top() and self.borders.top) try title.render(buffer, title_area);
+            if (title.bottom() and self.borders.bottom) try title.render(buffer, title_area);
         }
     }
 }

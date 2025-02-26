@@ -82,45 +82,38 @@ pub fn main() !void {
 }
 
 const App = struct {
-    pub fn render(area: zuit.Rect, buffer: *zuit.Buffer, allo: std.mem.Allocator) !void {
-        const block = widget.Block {
-            .borders = widget.Borders.all(),
-            .titles = &.{
-                .{
-                    .text = " Zuit Layout ",
-                    .style = .{ .fg = Color.Blue, .bold = true },
-                    .position = .TopCenter
-                },
-            },
-        };
-        try block.render(buffer, area);
-        try widget.Clear.render(buffer, block.inner(area));
+    pub fn render(area: zuit.Rect, buffer: *zuit.Buffer) !void {
+        try widget.Clear.render(buffer, area);
 
-        const vert = widget.Layout(3).vertical(.{
-            widget.Constraint.fill(1),
-            widget.Constraint.length(3),
-            widget.Constraint.fill(1),
-        }).split(block.inner(area));
+        const v = widget.Layout(3)
+            .vertical(.{
+                widget.Constraint.length(3),
+                widget.Constraint.length(3),
+                widget.Constraint.fill(1),
+            })
+            .split(area);
 
-        const constraints = [_]widget.Constraint{
-            widget.Constraint.min(10),
-            widget.Constraint.max(5),
-            widget.Constraint.max(5),
-            widget.Constraint.fill(2),
-            widget.Constraint.fill(1),
-        };
+        const a = widget.Block.bordered();
+        try a.render(buffer, v[0]);
+        try widget.Span.styled("Hello, world", .{ .fg = Color.Red })
+            .render(buffer, a.inner(v[0]));
 
-        const hoz = widget.Layout(5).horizontal(&constraints).split(vert[1]);
-        for (hoz) |a| {
-            const container = widget.Block.bordered();
-            try container.render(buffer, a);
-            const inner = container.inner(a);
+        const b = widget.Block.bordered();
+        try b.render(buffer, v[1]);
 
-            const text = try std.fmt.allocPrint(allo, "{d}", .{ a.width });
-            defer allo.free(text);
+        try widget.Line.center(&.{
+            widget.Span.styled("┓┓┓┓┓ ", .{ .fg = Color.Magenta }),
+            widget.Span.styled("┓┓┓┓┓┓", .{ .fg = Color.Red }),
+        }).render(buffer, b.inner(v[1]));
 
-            try widget.Line.center(&.{ widget.Span.from(text) }).render(buffer, inner);
-            // try buffer.setFormatted(inner.x, inner.y, null, "{d}", .{ a.width });
-        }
+        const c = widget.Block.bordered();
+        try c.render(buffer, v[2]);
+
+        try widget.Paragraph.init(&.{
+            widget.Line.init(&.{
+                widget.Span.styled("Hello, ", .{ .fg = Color.Red }),
+                widget.Span.styled("world", .{ .fg = Color.Magenta }),
+            })
+        }).render(buffer, b.inner(v[1]));
     }
 };

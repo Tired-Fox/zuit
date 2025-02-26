@@ -13,6 +13,11 @@ pub const Constraint = @import("./widget/layout.zig").Constraint;
 pub const Buffer = @import("./root.zig").Buffer;
 pub const Rect = @import("./root.zig").Rect;
 
+pub const Title = @import("./widget/text.zig").Title;
+pub const Span = @import("./widget/text.zig").Span;
+pub const Line = @import("./widget/text.zig").Line;
+pub const Paragraph = @import("./widget/text.zig").Paragraph;
+
 
 /// Flags to determine which borders are active/shown
 pub const Borders = packed struct(u4) {
@@ -266,3 +271,9 @@ pub const Clear = struct {
         try buffer.fill(rect, ' ', null);
     }
 }{};
+
+pub const Align = enum {
+    Start,
+    Center,
+    End,
+};

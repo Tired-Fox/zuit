@@ -214,4 +214,13 @@ pub const Rect = struct {
     y: u16 = 0,
     width: u16 = 0,
     height: u16 = 0,
+
+    pub fn padded(self: *const @This(), padding: widget.Padding) Rect {
+        return .{
+            .x = self.x + padding.left,
+            .y = self.y + padding.top,
+            .width = self.width - padding.left - padding.right,
+            .height = self.height - padding.top - padding.bottom,
+        };
+    }
 };

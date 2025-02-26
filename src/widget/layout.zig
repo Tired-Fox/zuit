@@ -104,10 +104,6 @@ pub fn Layout(comptime N: usize) type {
             if (remaining > 0 and total_fill > 0) {
                 std.mem.sort(usize, &indexes, &self.constraints, cmpConstraint);
 
-                var per = @divFloor(remaining + mins, total_fill);
-                var overlap = (remaining + mins) % total_fill;
-                var overlap_step: u16 = @intFromFloat(@ceil(@as(f32, @floatFromInt(overlap)) / @as(f32, @floatFromInt(total_fill))));
-
                 for (self.constraints, 0..) |constraint, i| {
                     switch (constraint) {
                         .max => |max| {
@@ -115,43 +111,42 @@ pub fn Layout(comptime N: usize) type {
                             sizes[i] = if (remaining -| max == 0) remaining else max;
                             remaining -|= max;
                         },
-                        .min => |min| if (min >= per) {
-                            sizes[i] = min;
-                            mins -= min;
-                            total_fill -= 1;
+                        .min => |min| {
+                            const per = @divFloor(remaining + mins, total_fill);
+                            if (min >= per) {
+                                sizes[i] = min;
+                                mins -= min;
+                                total_fill -= 1;
+                            }
                         },
                         else => {}
                     }
                 }
 
-                per = @divFloor(remaining + mins, total_fill);
-                overlap = (remaining + mins) % total_fill;
-                overlap_step = @intFromFloat(@ceil(@as(f32, @floatFromInt(overlap)) / @as(f32, @floatFromInt(total_fill))));
+                const per: f32 = @as(f32, @floatFromInt(remaining + mins)) / @as(f32, @floatFromInt(total_fill));
 
                 for (indexes) |i| {
                     const constraint = self.constraints[i];
                     switch (constraint) {
-                        .min => |min| if (min < per) {
-                            sizes[i] = per;
-                            remaining -|= per - min;
-                            if (overlap > 0) {
-                                sizes[i] +|= 1;
-                                overlap -|= overlap_step;
-                                remaining -|= overlap_step;
+                        .min => |min| {
+                            const amount: u16 = @intFromFloat(per);
+                            if (min < amount) {
+                                sizes[i] = amount;
+                                remaining -|= amount - min;
+                                mins -= min;
+                                total_fill -= 1;
+
+                                if (total_fill == 0) sizes[i] += remaining;
                             }
                         },
                         .fill => |fill| {
-                            if (per == 0) {
-                                sizes[i] = if (remaining > 0) 1 else 0; 
-                                remaining -|= 1;
-                            } else {
-                                sizes[i] = per * fill;
-                                if (overlap > 0) {
-                                    sizes[i] +|= 1;
-                                    overlap -|= overlap_step;
-                                    remaining -|= overlap_step;
-                                }
-                            }
+                            var amount: u16 = @intFromFloat(@ceil(per * @as(f32, @floatFromInt(fill))));
+                            amount = @min(remaining, amount);
+
+                            sizes[i] = amount;
+                            remaining -|= amount;
+                            total_fill -= 1;
+                            if (total_fill == 0) sizes[i] += remaining;
                         },
                         else => {}
                     }

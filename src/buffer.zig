@@ -76,9 +76,7 @@ pub const Buffer = struct {
             else => @compileError("type not supported as a buffer cell")
         }
 
-        if (style) |s| {
-            item.style = s;
-        }
+        item.style = style;
     }
 
     pub fn fill(self: *@This(), area: Rect, char: anytype, style: ?Style) !void {
@@ -102,16 +100,8 @@ pub const Buffer = struct {
     );
 
     fn appendWrite(ctx: *WriterContext, data: []const u8) !usize {
-        if (ctx.area.x + data.len > ctx.area.x + ctx.area.width) {
-            return error.EndOfBuffer;
-        }
-
-        for (data, 0..) |c, i| {
-            try ctx.buffer.set(ctx.area.x + @as(u16, @intCast(i)), ctx.area.y, c, ctx.style);
-        }
-
+        try ctx.buffer.setSlice(ctx.area.x, ctx.area.y, data, ctx.style);
         ctx.area.x +|= @as(u16, @intCast(data.len));
-
         return data.len;
     }
 
@@ -130,8 +120,10 @@ pub const Buffer = struct {
     }
 
     pub fn setSlice(self: *@This(), x: u16, y: u16, slice: []const u8, style: ?Style) !void {
-        for (0..slice.len) |i| {
-            try self.set(x + @as(u16, @intCast(i)), y, slice[i], style);
+        var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = slice };
+        var i: usize = 0;
+        while (iter.nextCodepoint()) |codepoint| : (i += 1) {
+            try self.set(x + @as(u16, @intCast(i)), y, codepoint, style);
         }
     }
 

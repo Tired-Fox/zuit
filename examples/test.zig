@@ -11,16 +11,14 @@ pub fn main() !void {
 
     const area = zuit.Rect { .width = 189, .height = 44 };
 
-    const constraints = [_]widget.Constraint{
-        widget.Constraint.min(10),
-        widget.Constraint.max(5),
-        widget.Constraint.max(5),
-        widget.Constraint.fill(2),
+    const block = widget.Block.bordered();
+    const vert = widget.Layout(3).vertical(.{
         widget.Constraint.fill(1),
-    };
+        widget.Constraint.length(3),
+        widget.Constraint.fill(1),
+    }).split(block.inner(area));
 
-    const hoz = widget.Layout(5).horizontal(&constraints).split(area);
-    for (hoz) |a| {
-        std.debug.print("{any}\n", .{ a });
+    for (vert) |v| {
+        std.debug.print("{any}\n", .{v});
     }
 }
