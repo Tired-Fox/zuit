@@ -78,6 +78,9 @@ pub fn main() !void {
                         else => {},
                     }
                 },
+                .resize => |resize| {
+                    try term.resize(resize[0], resize[1]);
+                },
                 else => {}
             }
         }
@@ -109,6 +112,7 @@ const App = struct {
             },
         };
         try block.render(buffer, area);
+        try widget.Clear.render(buffer, block.inner(area));
 
         const vert = widget.Layout(3).vertical(.{
             widget.Constraint.fill(1),

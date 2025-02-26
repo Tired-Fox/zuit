@@ -261,7 +261,7 @@ pub const Padding = struct {
 
 /// Widget that when rendered will clear the area it is rendered to.
 pub const Clear = struct {
-    fn render(self: *const @This(), buffer: *Buffer, rect: Rect) !void {
+    pub fn render(self: *const @This(), buffer: *Buffer, rect: Rect) !void {
         _ = self;
         try buffer.fill(rect, ' ', null);
     }

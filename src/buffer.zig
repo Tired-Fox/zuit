@@ -52,14 +52,12 @@ pub const Buffer = struct {
         self.alloc.free(self.inner);
     }
 
-    pub fn resize(self: *@This(), area: Rect) !void {
+    pub fn resize(self: *@This(), w: u16, h: u16) !void {
         self.alloc.free(self.inner);
-        self.inner = self.alloc.alloc(Cell, @intCast(area.width * area.height));
-        for (0..self.inner.len) |i| {
-            self.inner[i] = .{};
-        }
-
-        self.area = area;
+        self.inner = try self.alloc.alloc(Cell, @intCast(w * h));
+        for (self.inner) |*cell| cell.* = .{};
+        self.area.width = w;
+        self.area.height = h;
     }
 
     pub fn set(self: *@This(), x: u16, y: u16, char: anytype, style: ?Style) !void {
@@ -86,7 +84,7 @@ pub const Buffer = struct {
     pub fn fill(self: *@This(), area: Rect, char: anytype, style: ?Style) !void {
         for (area.x..area.x+area.width) |w| {
             for (area.y..area.y+area.height) |h| {
-                try self.set(w, h, char, style);
+                try self.set(@intCast(w), @intCast(h), char, style);
             }
         }
     }

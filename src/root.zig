@@ -16,7 +16,6 @@ pub const Terminal = struct {
     source: std.fs.File,
 
     buffer: Buffer,
-
     previous: []Cell,
 
     pub fn init(allo: std.mem.Allocator, source: Source) !@This() {
@@ -35,9 +34,10 @@ pub const Terminal = struct {
     }
 
     pub fn resize(self: *@This(), w: u16, h: u16) !void {
-        if (self.previous) |prev| self.allo.free(prev);
-        self.previous = self.allo.alloc(Cell, @intCast(w * h));
-        self.buffer.resize(w, h);
+        self.allo.free(self.previous);
+        self.previous = try self.allo.alloc(Cell, @intCast(w * h));
+        for (self.previous) |*cell| cell.* = .{};
+        try self.buffer.resize(w, h);
     }
 
     pub fn renderWithState(self: *@This(), component: anytype, state: anytype) !void {
