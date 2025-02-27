@@ -145,6 +145,10 @@ pub const Line = struct {
         return .{ .spans = spans, .text_align = .Center };
     }
 
+    pub fn empty() @This() {
+        return .{ .spans = &.{}, .text_align = .Center };
+    }
+
     pub fn end(spans:  []const Span) @This() {
         return .{ .spans = spans, .text_align = .End };
     }

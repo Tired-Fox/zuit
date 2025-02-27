@@ -108,10 +108,17 @@ const App = struct {
         const message = widget.Paragraph {
             .lines = &.{
                 widget.Line.center(&.{ widget.Span.init("Hello, Zuit!") }),
-                widget.Line.center(&.{}),
-                widget.Line.center(&.{ widget.Span.init("Repository: https://github.com/Tired-Fox/zuit") }),
-                widget.Line.center(&.{ widget.Span.init("Terminal API: https://github.com/Tired-Fox/termz") }),
-                widget.Line.center(&.{ widget.Span.init("Press `Esc`, `Ctrl-C` or `q` to stop running.") }),
+                widget.Line.empty(),
+                widget.Line.center(&.{
+                    widget.Span.init("Repository: "),
+                    widget.Span.styled("https://github.com/Tired-Fox/zuit", .{ .fg = Color.Green, .underline = true })
+                }),
+                widget.Line.center(&.{
+                    widget.Span.init("Terminal API: "),
+                    widget.Span.styled("https://github.com/Tired-Fox/termz", .{ .fg = Color.Green, .underline = true })
+                }),
+                widget.Line.empty(),
+                widget.Line.center(&.{ widget.Span.styled("Press `Esc`, `Ctrl-C` or `q` to stop running.", .{ .italic = true }) }),
             }
         };
         try message.render(buffer, vert[0]);
@@ -125,7 +132,7 @@ const App = struct {
             const text = try std.fmt.allocPrint(allo, "{d}", .{ a.width });
             defer allo.free(text);
 
-            try widget.Line.center(&.{ widget.Span.init(text) }).render(buffer, inner);
+            try widget.Line.center(&.{ widget.Span.styled(text, .{ .fg = Color.Magenta, .bold = true }) }).render(buffer, inner);
             // try buffer.setFormatted(inner.x, inner.y, null, "{d}", .{ a.width });
         }
     }
