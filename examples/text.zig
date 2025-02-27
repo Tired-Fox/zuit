@@ -24,18 +24,12 @@ fn setup() !void {
         Screen.EnterAlternateBuffer,
         Cursor { .col = 1, .row = 1 },
         Cursor.Hide,
-        Capture.EnableMouse,
-        Capture.EnableFocus,
-        Capture.EnableBracketedPaste,
     });
 }
 
 fn cleanup() !void {
     try Screen.disableRawMode();
     try execute(.Stdout, .{
-        Capture.DisableMouse,
-        Capture.DisableFocus,
-        Capture.DisableBracketedPaste,
         Cursor.Show,
         Screen.LeaveAlternateBuffer,
     });
@@ -108,12 +102,25 @@ const App = struct {
 
         const c = widget.Block.bordered();
         try c.render(buffer, v[2]);
+        var special = c.inner(v[2]);
+        special.width = 8;
 
-        try widget.Paragraph.init(&.{
-            widget.Line.init(&.{
-                widget.Span.styled("Hello, ", .{ .fg = Color.Red }),
-                widget.Span.styled("world", .{ .fg = Color.Magenta }),
-            })
-        }).render(buffer, b.inner(v[1]));
+        try (widget.Paragraph {
+            .lines = &.{
+                widget.Line.init(&.{
+                    widget.Span.styled("  Hello, ", .{ .fg = Color.Red }),
+                    widget.Span.styled("world  ", .{ .fg = Color.Magenta }),
+                }),
+                widget.Line.init(&.{
+                    widget.Span.styled("  How are you?  ", .{ .fg = Color.Red }),
+                }),
+                widget.Line.init(&.{
+                    widget.Span.styled("  Today?  ", .{ .fg = Color.Red }),
+                })
+            },
+            .text_align = .Center,
+            .trim = true,
+            .wrap = true,
+        }).render(buffer, special);
     }
 };

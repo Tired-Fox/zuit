@@ -45,7 +45,7 @@ pub const Terminal = struct {
         try renderComponentWithState(&self.buffer, self.buffer.area, component, state, null);
 
         // Render buffer iterating previous at the same time
-        try self.buffer.render(self.source.writer(), self.previous);
+        try self.buffer.write(self.source.writer(), self.previous);
     }
 
     pub fn render(self: *@This(), component: anytype) !void {
@@ -54,11 +54,11 @@ pub const Terminal = struct {
         try renderComponent(&self.buffer, region, component, null);
 
         // Render buffer iterating previous at the same time
-        try self.buffer.render(self.source.writer(), self.previous);
+        try self.buffer.write(self.source.writer(), self.previous);
     }
 };
 
-fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, state: anytype, style: ?Style) !void {
+pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, state: anytype, style: ?Style) !void {
     const T = @TypeOf(component);
     const info = @typeInfo(T);
 
@@ -117,24 +117,24 @@ fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, state
                 },
                 else => {
                     switch (p.child) {
-                        []const u8 => try buff.setSlice(0, 0, component, style),
-                        u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
-                        else => @compileError(@typeName(T) ++ " does not support rendering"),
+                        []const u8 => try buff.setSlice(rect.x, rect.y, component, style),
+                        u21, u8, u32, comptime_int => try buff.set(rect.x, rect.y, component, style),
+                        else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{ component }),
                     }
                 }
             }
         },
         else => {
             switch (T) {
-                []const u8 => try buff.setSlice(0, 0, component, style),
-                u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
-                else => @compileError(@typeName(T) ++ " does not support rendering"),
+                []const u8 => try buff.setSlice(rect.x, rect.y, component, style),
+                u21, u8, u32, comptime_int => try buff.set(rect.x, rect.y, component, style),
+                else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{ component }),
             }
         }
     }
 }
 
-fn renderComponent(buff: *Buffer, rect: Rect, component: anytype, style: ?Style) !void {
+pub fn renderComponent(buff: *Buffer, rect: Rect, component: anytype, style: ?Style) !void {
     const T = @TypeOf(component);
     const info = @typeInfo(T);
 
@@ -177,18 +177,18 @@ fn renderComponent(buff: *Buffer, rect: Rect, component: anytype, style: ?Style)
                 },
                 else => {
                     switch (p.child) {
-                        []const u8 => try buff.setSlice(0, 0, component, style),
-                        u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
-                        else => @compileError(@typeName(T) ++ " does not support rendering"),
+                        []const u8 => try buff.setSlice(rect.x, rect.y, component, style),
+                        u21, u8, u32, comptime_int => try buff.set(rect.x, rect.y, component, style),
+                        else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{ component }),
                     }
                 }
             }
         },
         else => {
             switch (T) {
-                []const u8 => try buff.setSlice(0, 0, component, style),
-                u21, u8, u32, comptime_int => try buff.set(0, 0, component, style),
-                else => @compileError(@typeName(T) ++ " does not support rendering"),
+                []const u8 => try buff.setSlice(rect.x, rect.y, component, style),
+                u21, u8, u32, comptime_int => try buff.set(rect.x, rect.y, component, style),
+                else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{ component }),
             }
         }
     }

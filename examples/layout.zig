@@ -24,18 +24,12 @@ fn setup() !void {
         Screen.EnterAlternateBuffer,
         Cursor { .col = 1, .row = 1 },
         Cursor.Hide,
-        Capture.EnableMouse,
-        Capture.EnableFocus,
-        Capture.EnableBracketedPaste,
     });
 }
 
 fn cleanup() !void {
     try Screen.disableRawMode();
     try execute(.Stdout, .{
-        Capture.DisableMouse,
-        Capture.DisableFocus,
-        Capture.DisableBracketedPaste,
         Cursor.Show,
         Screen.LeaveAlternateBuffer,
     });
@@ -66,9 +60,10 @@ pub fn main() !void {
         if (try stream.parseEvent()) |event| {
             switch (event) {
                 .key => |key| {
-                    if (key.matches(.{ .code = KeyCode.char('q') })) break;
+                    if (key.matches(.{ .code = KeyCode.Esc })) break;
                     if (key.matches(.{ .code = KeyCode.char('c'), .ctrl = true })) break;
                     if (key.matches(.{ .code = KeyCode.char('C'), .ctrl = true })) break;
+                    if (key.matches(.{ .code = KeyCode.char('q') })) break;
                 },
                 .resize => |resize| {
                     try term.resize(resize[0], resize[1]);
@@ -110,6 +105,17 @@ const App = struct {
             widget.Constraint.fill(1),
         };
 
+        const message = widget.Paragraph {
+            .lines = &.{
+                widget.Line.center(&.{ widget.Span.init("Hello, Zuit!") }),
+                widget.Line.center(&.{}),
+                widget.Line.center(&.{ widget.Span.init("Repository: https://github.com/Tired-Fox/zuit") }),
+                widget.Line.center(&.{ widget.Span.init("Terminal API: https://github.com/Tired-Fox/termz") }),
+                widget.Line.center(&.{ widget.Span.init("Press `Esc`, `Ctrl-C` or `q` to stop running.") }),
+            }
+        };
+        try message.render(buffer, vert[0]);
+
         const hoz = widget.Layout(5).horizontal(&constraints).split(vert[1]);
         for (hoz) |a| {
             const container = widget.Block.bordered();
@@ -119,7 +125,7 @@ const App = struct {
             const text = try std.fmt.allocPrint(allo, "{d}", .{ a.width });
             defer allo.free(text);
 
-            try widget.Line.center(&.{ widget.Span.from(text) }).render(buffer, inner);
+            try widget.Line.center(&.{ widget.Span.init(text) }).render(buffer, inner);
             // try buffer.setFormatted(inner.x, inner.y, null, "{d}", .{ a.width });
         }
     }

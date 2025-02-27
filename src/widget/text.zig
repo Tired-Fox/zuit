@@ -107,6 +107,11 @@ pub const Span = struct {
         return .{ .text = text, .style = style };
     }
 
+    /// Utf8 codepoint length of the span of text
+    pub fn len(self: *const @This()) usize {
+        return utf8Length(self.text);
+    }
+
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
         const max: usize = @intCast(area.width);
 
@@ -126,6 +131,7 @@ pub const Line = struct {
     spans: []const Span,
     text_align: ?Align = null,
     style: ?Style = null,
+    trim: bool = false,
 
     pub fn init(spans:  []const Span) @This() {
         return .{ .spans = spans };
@@ -143,15 +149,23 @@ pub const Line = struct {
         return .{ .spans = spans, .text_align = .End };
     }
 
+    /// Utf8 codepoint length of the full line of text
+    pub fn len(self: *const @This()) usize {
+        var length: usize = 0;
+        for (self.spans) |span| length += span.len();
+        return length;
+    }
+
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
         switch (self.text_align orelse Align.Start) {
             .Start => {
                 // Truncate the end
                 var x: u16 = area.x;
-                for (self.spans) |item| {
+                for (self.spans, 0..) |item, i| {
                     const max: usize = @intCast(area.width);
 
-                    var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = item.text };
+                    const text = if (self.trim and i == 0) std.mem.trimLeft(u8, item.text, &std.ascii.whitespace) else item.text;
+                    var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = text };
                     while (iter.nextCodepoint()) |codepoint| : (x +|= 1) {
                         if (x > max) break;
                         try buffer.set(x, area.y, codepoint, item.style orelse self.style);
@@ -163,7 +177,12 @@ pub const Line = struct {
             .Center => {
                 // Truncate the both ends along will adding an x offset to center text
                 var total: usize = 0;
-                for (self.spans) |item| total +|= utf8Length(item.text);
+                for (self.spans, 0..) |item, i| {
+                    var text = item.text;
+                    if (self.trim and i == 0) text = std.mem.trimLeft(u8, text, &std.ascii.whitespace);
+                    if (self.trim and i == self.spans.len - 1) text = std.mem.trimRight(u8, text, &std.ascii.whitespace);
+                    total +|= utf8Length(text);
+                }
 
                 var offset: usize = 0;
                 if (total > @as(usize, @intCast(area.width))) {
@@ -175,14 +194,18 @@ pub const Line = struct {
                     x +|= @divFloor(area.width -| @as(u16, @intCast(total)), 2);
                 }
 
-                for (self.spans) |item| {
-                    var size = utf8Length(item.text);
+                for (self.spans, 0..) |item, i| {
+                    var text = item.text;
+                    if (self.trim and i == 0) text = std.mem.trimLeft(u8, text, &std.ascii.whitespace);
+                    if (self.trim and i == self.spans.len - 1) text = std.mem.trimRight(u8, text, &std.ascii.whitespace);
+
+                    var size = utf8Length(text);
                     if (size <= offset) {
                         offset -= size;
                         continue;
                     }
 
-                    var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = item.text };
+                    var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = text };
                     if (offset > 0) {
                         for (0..offset) |_| {
                             _ = iter.nextCodepointSlice();
@@ -212,9 +235,11 @@ pub const Line = struct {
 
                 while (true) : (i -= 1) {
                     const item = self.spans[i];
-                    const size = utf8Length(item.text);
+                    const text = if (self.trim and i == self.spans.len - 1) std.mem.trimRight(u8, item.text, &std.ascii.whitespace) else item.text;
 
-                    var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = item.text };
+                    const size = utf8Length(text);
+
+                    var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = text };
                     const skip = if (@as(u16, @intCast(size)) > x) @as(u16, @intCast(size)) -| x else 0;
 
                     if (skip > 0) {
@@ -259,7 +284,7 @@ pub const Paragraph = struct {
     /// This removes these characters from the calculation for wrapping
     /// and truncating.
     trim: bool = false,
-    text_align: Align = .Start,
+    text_align: ?Align = null,
     style: ?Style = null,
 
     pub fn init(lines: []const Line) @This() {
@@ -267,32 +292,233 @@ pub const Paragraph = struct {
     }
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
-        _ = self;
-        _ = buffer;
-        _ = area;
-        // Render each line same way that lines render except if
-        // the line is longer and wrap is on; then it attempts to split on
-        // whitespace characters and render the remaining spans on the next
-        // line
-        //
-        // When a span contains a whitespace and needs to be split it
-        // will create new spans with the same styling with the split/sliced
-        // portions of the parent span.
-        //
-        // In cases where a single word is left then it will attempt to split after
-        // non alphabetical characters (0-9 and symbols). Last resort would be to split
-        // the word at the max length. This could open the way for words to be split
-        // with an appropriate algorith and add a hyphen for words that continue.
-        //
-        // Assume lines are 12 wide.
-        // Paragraph[ Line[ Span["Hello!"], Span[" How are you doing today?"] ] ]
-        // ***
-        // Paragraph[ Line[ Span["Hello!"], Span["How"] ], Line[ Span["are you"] ], Line[ Span["doing today?"] ] ]
-        //
-        // Hello! How are you today?
-        // ***
-        // Hello! How
-        // are you 
-        // doing today?
+        // TODO: Wrapping
+
+        var pos = area;
+        if (self.wrap) {
+            outer: for (self.lines) |line| {
+                const l = Line {
+                    .spans = line.spans,
+                    .style = line.style orelse self.style,
+                    .text_align = line.text_align orelse self.text_align,
+                    .trim = line.trim or self.trim
+                };
+
+                var iter = chunk(&l, @intCast(area.width));
+                while (iter.next()) |item| {
+                    try item.render(buffer, pos);
+                    pos.y = @min(pos.y + 1, pos.height);
+                    if (pos.y == pos.height) break :outer;
+                }
+            }
+        } else {
+            for (self.lines) |line| {
+                const l = Line {
+                    .spans = line.spans,
+                    .style = line.style orelse self.style,
+                    .text_align = line.text_align orelse self.text_align,
+                    .trim = line.trim or self.trim
+                };
+                try l.render(buffer, pos);
+
+                pos.y = @min(pos.y + 1, pos.height);
+                if (pos.y == pos.height) break;
+            }
+        }
     }
 };
+
+const LinkChunkIter = struct {
+    span: usize = 0,
+    i: usize = 0,
+    w:  usize = 0,
+
+    max: usize,
+    size: usize,
+    line: *const Line,
+
+    /// Returns a tuple of { start, end, line }
+    /// 
+    /// The line has spans that are a slice into the original line.
+    /// start and end are the offsets from the first and last span representing
+    /// splits of the original line.
+    pub fn next(self: *@This()) ?Chunk {
+        if (self.span >= self.line.spans.len) return null;
+
+        const start = self.span;
+        var offset_start = self.i;
+
+        width_loop: while (self.w < self.max and self.span < self.line.spans.len) {
+            const text = self.line.spans[self.span].text;
+
+            // TODO: IF first span and trim is enabled
+            //       THEN trim the whitespace from the start
+            if (self.span == start and self.line.trim and self.i == 0) {
+                self.i += text.len - std.mem.trimLeft(u8, text, &std.ascii.whitespace).len;
+                offset_start = self.i;
+            }
+
+            var iter = std.unicode.Utf8Iterator { .i = self.i, .bytes = text };
+            while (iter.nextCodepointSlice()) |_| {
+                self.w += 1;
+                if (self.w >= self.max) {
+                    self.i = iter.i;
+                    if (self.i == text.len) break;
+                    break :width_loop;
+                }
+            }
+            self.i = 0;
+            self.span = @min(self.span + 1, self.line.spans.len);
+        }
+        self.w = 0;
+
+        // TODO: IF last span and trim is enabled
+        //       THEN trim the whitespace from the end
+        var offset_end = self.i;
+        const spans = self.line.spans[start..if (offset_end > 0) self.span + 1 else self.span];
+        if (self.line.trim and offset_end > 0) {
+            const e = std.mem.trimRight(u8, spans[spans.len-1].text[0..offset_end], &std.ascii.whitespace).len;
+            if (e != offset_end) offset_end = e;
+        }
+
+        return .{
+            .start = offset_start,
+            .end = offset_end,
+            .line = .{
+                .spans = spans,
+                .trim = self.line.trim,
+                .style = self.line.style,
+                .text_align = self.line.text_align
+            },
+        };
+    }
+
+    pub const Chunk = struct {
+        start: usize,
+        end: usize,
+        line: Line,
+
+        pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+            switch (self.line.text_align orelse Align.Start) {
+                .Start => {
+                    // Truncate the end
+                    var x: u16 = area.x;
+                    for (self.line.spans, 0..) |item, i| {
+                        const max: usize = @intCast(area.width);
+
+                        var text = item.text;
+                        if (self.start > 0 and i == 0) text = text[self.start..];
+                        if (self.end > 0 and i == self.line.spans.len - 1) text = text[0..self.end];
+
+                        var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = text };
+                        while (iter.nextCodepoint()) |codepoint| : (x +|= 1) {
+                            if (x > max) break;
+                            try buffer.set(x, area.y, codepoint, item.style orelse self.line.style);
+                        }
+
+                        if (x >= max) break;
+                    }
+                },
+                .Center => {
+                    // Truncate the both ends along will adding an x offset to center text
+                    var total: usize = 0;
+                    for (self.line.spans, 0..) |item, i| {
+                        var text = item.text;
+                        if (self.start > 0 and self.end > 0 and i == 0 and i == self.line.spans.len - 1) text = text[self.start..self.end]
+                        else if (self.start > 0 and i == 0) text = text[self.start..]
+                        else if (self.end > 0 and i == self.line.spans.len - 1) text = text[0..self.end];
+
+                        total +|= utf8Length(text);
+                    }
+
+                    var offset: usize = 0;
+                    if (total > @as(usize, @intCast(area.width))) {
+                        offset = @divFloor(total -| @as(usize, @intCast(area.width)), 2);
+                    }
+
+                    var x: u16 = 0;
+                    if (total < @as(usize, @intCast(area.width))) {
+                        x +|= @divFloor(area.width -| @as(u16, @intCast(total)), 2);
+                    }
+
+                    for (self.line.spans, 0..) |item, i| {
+                        var text = item.text;
+                        if (self.start > 0 and self.end > 0 and i == 0 and i == self.line.spans.len - 1) text = text[self.start..self.end]
+                        else if (self.start > 0 and i == 0) text = text[self.start..]
+                        else if (self.end > 0 and i == self.line.spans.len - 1) text = text[0..self.end];
+
+                        var size = utf8Length(text);
+                        if (size <= offset) {
+                            offset -= size;
+                            continue;
+                        }
+
+                        var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = text };
+                        if (offset > 0) {
+                            for (0..offset) |_| {
+                                _ = iter.nextCodepointSlice();
+                            }
+                            size -= offset;
+                            offset = 0;
+                        }
+
+                        var e: usize = size;
+                        if (x +| size > area.width) {
+                            e -|= (x +| size) -| (area.width);
+                        }
+
+                        const max: usize = @intCast(area.width);
+                        while (iter.nextCodepoint()) |codepoint| {
+                            if (x > max or e == 0) break;
+                            try buffer.set(area.x + x, area.y, codepoint, item.style orelse self.line.style);
+                            x +|= 1;
+                            e -|= 1;
+                        }
+                    }
+                },
+                .End => {
+                    // Truncate the beginning and push to the end of the line
+                    var x: u16 = area.width;
+                    var i: usize = self.line.spans.len - 1;
+
+                    while (true) : (i -= 1) {
+                        const item = self.line.spans[i];
+                        var text = item.text;
+                        if (self.start > 0 and i == 0) text = text[self.start..];
+                        if (self.end > 0 and i == self.line.spans.len - 1) text = text[0..self.end];
+
+                        const size = utf8Length(text);
+
+                        var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = text };
+                        const skip = if (@as(u16, @intCast(size)) > x) @as(u16, @intCast(size)) -| x else 0;
+
+                        if (skip > 0) {
+                            for (0..skip) |_| { _ = iter.nextCodepointSlice(); }
+                            x = 0;
+                            var a: u16 = 0;
+                            while (iter.nextCodepoint()) |codepoint| : (a += 1) {
+                                try buffer.set(area.x + a, area.y, codepoint, item.style orelse self.line.style);
+                            }
+                        } else {
+                            var a: u16 = 0;
+                            x -|= @intCast(size);
+                            while (iter.nextCodepoint()) |codepoint| : (a += 1) {
+                                try buffer.set(area.x + x + a, area.y, codepoint, item.style orelse self.line.style);
+                            }
+                        }
+
+                        if (x == 0 or i == 0) break;
+                    }
+                },
+            }
+        }
+    };
+};
+
+fn chunk(line: *const Line, max: usize) LinkChunkIter {
+    return .{
+        .size = line.len(),
+        .line = line,
+        .max = max,
+    };
+}

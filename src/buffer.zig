@@ -5,6 +5,8 @@ const Style = termz.style.Style;
 const Cursor = termz.action.Cursor;
 
 const Rect = @import("./root.zig").Rect;
+const renderComponent = @import("./root.zig").renderComponent;
+const renderComponentWithState = @import("./root.zig").renderComponentWithState;
 
 pub const Cell = struct {
     symbol: ?[4]u8 = null,
@@ -146,7 +148,15 @@ pub const Buffer = struct {
         return &self.inner[pos];
     }
 
-    pub fn render(self: *const @This(), writer: anytype, previous: []Cell) !void {
+    pub fn render(self: *@This(), component: anytype, area: Rect) !void {
+        try renderComponent(component, self, area);
+    }
+
+    pub fn renderWithState(self: *@This(), component: anytype, area: Rect, state: anytype) !void {
+        try renderComponentWithState(component, self, area, state);
+    }
+
+    pub fn write(self: *const @This(), writer: anytype, previous: []Cell) !void {
         var buffer = std.io.bufferedWriter(writer);
         var output = buffer.writer();
 
