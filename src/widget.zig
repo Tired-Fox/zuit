@@ -29,6 +29,8 @@ pub const Paragraph = @import("./widget/text.zig").Paragraph;
 pub const Gauge = @import("./widget/gauge.zig").Gauge;
 pub const LineGauge = @import("./widget/gauge.zig").LineGauge;
 
+pub const ScrollBar = @import("./widget/scroll.zig").ScrollBar;
+
 /// Spacing on the inside of an area starting from it's edges
 ///
 /// # Example

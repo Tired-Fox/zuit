@@ -78,9 +78,10 @@ pub fn main() !void {
 
 const App = struct {
     pub fn render(buffer: *zuit.Buffer, area: zuit.Rect) !void {
-        const vert = widget.Layout(2).vertical(.{
+        const vert = widget.Layout(3).vertical(.{
             widget.Constraint.length(1),
-            widget.Constraint.fill(1),
+            widget.Constraint.length(20),
+            widget.Constraint.length(20),
         }).split(area);
 
         const lg = widget.LineGauge {
@@ -97,5 +98,14 @@ const App = struct {
             .unfilled_style = .{ .fg = Color.Red },
         };
         try g.render(buffer, vert[1]);
+
+        const sb = widget.ScrollBar {
+            .orientation = .HorizontalTop,
+        };
+        var ss = widget.ScrollBar.State {
+            .total = 10,
+            .position = 6,
+        };
+        try sb.renderWithState(buffer, vert[2], &ss);
     }
 };

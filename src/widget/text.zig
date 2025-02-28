@@ -57,6 +57,7 @@ pub const Title = struct {
     };
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+        if (area.width == 0 or area.height == 0) return;
         // Renders and specific location regardless of border or other context
         // TopLeft────────────TopCenter───────────TopRight
         // │                                             │
@@ -113,6 +114,7 @@ pub const Span = struct {
     }
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+        if (area.width == 0 or area.height == 0) return;
         const max: usize = @intCast(area.width);
 
         var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = self.text };
@@ -161,6 +163,7 @@ pub const Line = struct {
     }
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+        if (area.width == 0 or area.height == 0) return;
         switch (self.text_align orelse Align.Start) {
             .Start => {
                 // Truncate the end
@@ -301,8 +304,7 @@ pub const Paragraph = struct {
     }
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
-        // TODO: Wrapping
-
+        if (area.width == 0 or area.height == 0) return;
         var pos = area;
         if (self.wrap) {
             outer: for (self.lines) |line| {
@@ -408,6 +410,7 @@ const LinkChunkIter = struct {
         line: Line,
 
         pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+            if (area.width == 0 or area.height == 0) return;
             switch (self.line.text_align orelse Align.Start) {
                 .Start => {
                     // Truncate the end

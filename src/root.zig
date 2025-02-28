@@ -224,4 +224,18 @@ pub const Rect = struct {
             .height = self.height - padding.top - padding.bottom,
         };
     }
+
+    pub fn inner(self: *const @This(), margin: Margin) @This() {
+        return .{
+            .x = self.x + margin.horizontal,
+            .y = self.y + margin.vertical,
+            .width = self.width - (margin.horizontal * 2),
+            .height = self.height - (margin.vertical * 2),
+        };
+    }
+
+    pub const Margin = struct {
+        vertical: u16 = 0,
+        horizontal: u16 = 0,
+    };
 };

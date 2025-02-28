@@ -20,6 +20,7 @@ pub const Gauge = struct {
     unfilled_style: ?Style = null,
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+        if (area.width == 0 or area.height == 0) return;
         // Fill entire area and center the label in the middle
         const remaining = area.width;
         var filled: u16 = @intFromFloat(@ceil(@as(f32, @floatFromInt(remaining)) * self.progress));
@@ -76,6 +77,7 @@ pub const LineGauge = struct {
     unfilled_style: ?Style = null,
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+        if (area.width == 0 or area.height == 0) return;
         // Fill entire line where the label is rendered in front of (to the left) of the line
         const char = self.set.horizontal;
 

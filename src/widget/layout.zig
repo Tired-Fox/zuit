@@ -83,7 +83,7 @@ pub fn Layout(comptime N: usize) type {
                         remaining -|= w;
                     },
                     .percentage => |p| {
-                        const percent: f32 = @divFloor(@as(f32, @floatFromInt(p)), 100.0);
+                        const percent: f32 = @as(f32, @floatFromInt(@min(p, 100))) / 100.0;
                         const w: u16 = @intFromFloat(@as(f32, @floatFromInt(size)) * percent);
 
                         sizes[i] = if (remaining -| w == 0) remaining else w;
@@ -209,8 +209,8 @@ pub const Constraint = union(enum) {
         return .{ .length = size };
     }
 
-    pub fn ratio(w: u16, h: u16) @This() {
-        return .{ .ratio = .{ w, h } };
+    pub fn ratio(n: u16, d: u16) @This() {
+        return .{ .ratio = .{ n, d } };
     }
 
     pub fn percentage(percent: u16) @This() {

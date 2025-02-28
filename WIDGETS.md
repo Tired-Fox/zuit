@@ -8,10 +8,10 @@
 - [x] Title
 - [x] Gauge
 - [x] LineGuage
+- [x] Scrollbar
 - [ ] List
 - [ ] Table
 - [ ] Tabs
-- [ ] Scrollbar
 - [ ] BarChart
 - [ ] Chart
 - [ ] Sparkline
