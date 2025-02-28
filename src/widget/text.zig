@@ -295,12 +295,7 @@ pub const Paragraph = struct {
     style: ?Style = null,
 
     pub fn init(value: anytype) @This() {
-        return switch (@TypeOf(value)) {
-            []const u8 => .{ .lines = &.{ Line{ .spans = &.{ Span { .text = value } } } } },
-            Span => .{ .lines = &.{ Line{ .spans = &.{ value } } } },
-            []const Line => .{ .lines = value },
-            else => @compileError("expected []const u8 or []const Span; got " ++ @typeName(@TypeOf(value))),
-        };
+        return .{ .lines = value };
     }
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {

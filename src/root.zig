@@ -74,8 +74,6 @@ pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, s
 
             const params = @typeInfo(@TypeOf(func)).Fn.params;
             var args: std.meta.ArgsTuple(@TypeOf(func)) = undefined;
-            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-            defer arena.deinit();
             inline for (params, 0..) |param, i| {
                 args[i] = switch(param.type.?) {
                     *const T, *T => component,
@@ -83,7 +81,6 @@ pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, s
                     *Buffer, *const Buffer => buff,
                     Rect => rect,
                     @TypeOf(state) => state,
-                    std.mem.Allocator => arena.allocator(),
                     else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                 };
             }
@@ -101,8 +98,6 @@ pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, s
                     const func = @field(p.child, name);
                     const params = @typeInfo(@TypeOf(func)).Fn.params;
                     var args: std.meta.ArgsTuple(@TypeOf(func)) = undefined;
-                    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-                    defer arena.deinit();
                     inline for (params, 0..) |param, i| {
                         args[i] = switch(param.type.?) {
                             *const p.child, *p.child => component,
@@ -110,7 +105,6 @@ pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, s
                             *Buffer, *const Buffer => buff,
                             Rect => rect,
                             @TypeOf(state) => state,
-                            std.mem.Allocator => arena.allocator(),
                             else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                         };
                     }
@@ -143,15 +137,12 @@ pub fn renderComponent(buff: *Buffer, rect: Rect, component: anytype, style: ?St
         .Struct => if (@hasDecl(T, "render")) {
             const params = @typeInfo(@TypeOf(T.render)).Fn.params;
             var args: std.meta.ArgsTuple(@TypeOf(T.render)) = undefined;
-            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-            defer arena.deinit();
             inline for (params, 0..) |param, i| {
                 args[i] = switch(param.type.?) {
                     *const T, *T => &component,
                     T => component,
                     *Buffer, *const Buffer => buff,
                     Rect => rect,
-                    std.mem.Allocator => arena.allocator(),
                     else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                 };
             }
@@ -162,15 +153,12 @@ pub fn renderComponent(buff: *Buffer, rect: Rect, component: anytype, style: ?St
                 .Struct => if (@hasDecl(p.child, "render")) {
                     const params = @typeInfo(@TypeOf(p.child.render)).Fn.params;
                     var args: std.meta.ArgsTuple(@TypeOf(p.child.render)) = undefined;
-                    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-                    defer arena.deinit();
                     inline for (params, 0..) |param, i| {
                         args[i] = switch(param.type.?) {
                             *const p.child, *p.child => component,
                             p.child => component.*,
                             *Buffer, *const Buffer => buff,
                             Rect => rect,
-                            std.mem.Allocator => arena.allocator(),
                             else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                         };
                     }

@@ -9,6 +9,8 @@ pub const border = @import("./widget/border.zig");
 pub const text = @import("./widget/text.zig");
 pub const gauge = @import("./widget/text.zig");
 pub const layout = @import("./widget/layout.zig");
+pub const list = @import("./widget/list.zig");
+pub const scroll = @import("./widget/scroll.zig");
 
 pub const Buffer = @import("./root.zig").Buffer;
 pub const Rect = @import("./root.zig").Rect;
@@ -30,6 +32,8 @@ pub const Gauge = @import("./widget/gauge.zig").Gauge;
 pub const LineGauge = @import("./widget/gauge.zig").LineGauge;
 
 pub const ScrollBar = @import("./widget/scroll.zig").ScrollBar;
+
+pub const List = @import("./widget/list.zig").List;
 
 /// Spacing on the inside of an area starting from it's edges
 ///

@@ -64,6 +64,13 @@ pub fn main() !void {
                     if (key.matches(.{ .code = KeyCode.char('q') })) break;
                     if (key.matches(.{ .code = KeyCode.char('c'), .ctrl = true })) break;
                     if (key.matches(.{ .code = KeyCode.char('C'), .ctrl = true })) break;
+
+                    if (key.matches(.{ .code = KeyCode.Down, .kind = .press })) {
+                        app.list_state = @min(app.list_state + 1, 7);
+                    }
+                    if (key.matches(.{ .code = KeyCode.Up, .kind = .press })) {
+                        app.list_state -|= 1;
+                    }
                 },
                 .resize => |resize| {
                     try term.resize(resize[0], resize[1]);
@@ -77,11 +84,15 @@ pub fn main() !void {
 }
 
 const App = struct {
-    pub fn render(buffer: *zuit.Buffer, area: zuit.Rect) !void {
-        const vert = widget.Layout(3).vertical(.{
+    list_state: usize = 0,
+
+    pub fn render(self: *const @This(), buffer: *zuit.Buffer, area: zuit.Rect) !void {
+        try widget.Clear.render(buffer, area);
+        const vert = widget.Layout(4).vertical(.{
             widget.Constraint.length(1),
-            widget.Constraint.length(20),
-            widget.Constraint.length(20),
+            widget.Constraint.length(10),
+            widget.Constraint.length(1),
+            widget.Constraint.length(3),
         }).split(area);
 
         const lg = widget.LineGauge {
@@ -99,13 +110,30 @@ const App = struct {
         };
         try g.render(buffer, vert[1]);
 
-        const sb = widget.ScrollBar {
-            .orientation = .HorizontalTop,
-        };
         var ss = widget.ScrollBar.State {
             .total = 10,
             .position = 6,
         };
+
+        const sb = widget.ScrollBar {
+            .orientation = .HorizontalTop,
+        };
         try sb.renderWithState(buffer, vert[2], &ss);
+
+        const list = widget.List {
+            .items = &.{
+                widget.Line.init(&.{ widget.Span.init("Line 1") }),
+                widget.Line.init(&.{ widget.Span.init("Line 2") }),
+                widget.Line.init(&.{ widget.Span.init("Line 3") }),
+                widget.Line.init(&.{ widget.Span.init("Line 4") }),
+                widget.Line.init(&.{ widget.Span.init("Line 5") }),
+                widget.Line.init(&.{ widget.Span.init("Line 6") }),
+                widget.Line.init(&.{ widget.Span.init("Line 7") }),
+                widget.Line.init(&.{ widget.Span.init("Line 8") }),
+            },
+            .highlight_style = .{ .bg = Color.Yellow, .fg = Color.Black },
+            .highlight_symbol = ">",
+        };
+        try list.renderWithState(buffer, vert[3], self.list_state);
     }
 };
