@@ -62,9 +62,9 @@ pub const Buffer = struct {
         self.area.height = h;
     }
 
-    pub fn set(self: *@This(), x: u16, y: u16, char: anytype, style: ?Style) !void {
+    pub fn set(self: *@This(), x: u16, y: u16, char: anytype, style: ?Style) void {
         const pos: usize = @intCast((y * self.area.width) + x);
-        if (pos >= self.inner.len) return error.OutOfBounds;
+        if (x >= self.area.width or y >= self.area.height or pos >= self.inner.len) return;
 
         var item = &self.inner[pos];
 
@@ -72,19 +72,19 @@ pub const Buffer = struct {
             u8 => item.symbol = [4]u8{ char, 0, 0, 0 },
             u21, u32, comptime_int => {
                 var buff: [4]u8 = [_]u8{0}**4;
-                _ = try std.unicode.utf8Encode(@intCast(char), &buff);
+                _ = std.unicode.utf8Encode(@intCast(char), &buff) catch return;
                 item.symbol = buff;
             },
-            else => @compileError("type not supported as a buffer cell")
+            else => @compileError("type cannot be converted to a buffer cell")
         }
 
         item.style = style;
     }
 
-    pub fn fill(self: *@This(), area: Rect, char: anytype, style: ?Style) !void {
+    pub fn fill(self: *@This(), area: Rect, char: anytype, style: ?Style) void {
         for (area.x..area.x+area.width) |w| {
             for (area.y..area.y+area.height) |h| {
-                try self.set(@intCast(w), @intCast(h), char, style);
+                self.set(@intCast(w), @intCast(h), char, style);
             }
         }
     }
@@ -95,14 +95,14 @@ pub const Buffer = struct {
         style: ?Style,
     };
 
-    const Writer = std.io.Writer(
+    const Writer = std.io.GenericWriter(
         *WriterContext,
         anyerror,
         appendWrite
     );
 
     fn appendWrite(ctx: *WriterContext, data: []const u8) !usize {
-        try ctx.buffer.setSlice(ctx.area.x, ctx.area.y, data, ctx.style);
+        ctx.buffer.setSlice(ctx.area.x, ctx.area.y, data, ctx.style);
         ctx.area.x +|= @as(u16, @intCast(data.len));
         return data.len;
     }
@@ -121,29 +121,29 @@ pub const Buffer = struct {
         try writer.print(fmt, args);
     }
 
-    pub fn setSlice(self: *@This(), x: u16, y: u16, slice: []const u8, style: ?Style) !void {
+    pub fn setSlice(self: *@This(), x: u16, y: u16, slice: []const u8, style: ?Style) void {
         var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = slice };
         var i: usize = 0;
         while (iter.nextCodepoint()) |codepoint| : (i += 1) {
-            try self.set(x + @as(u16, @intCast(i)), y, codepoint, style);
+            self.set(x + @as(u16, @intCast(i)), y, codepoint, style);
         }
     }
 
-    pub fn setRepeatX(self: *@This(), x: u16, y: u16, count: usize, char: anytype, style: ?Style) !void {
+    pub fn setRepeatX(self: *@This(), x: u16, y: u16, count: usize, char: anytype, style: ?Style) void {
         for (0..count) |i| {
-            try self.set(x + @as(u16, @intCast(i)), y, char, style);
+            self.set(x + @as(u16, @intCast(i)), y, char, style);
         }
     }
 
-    pub fn setRepeatY(self: *@This(), x: u16, y: u16, count: usize, char: anytype, style: ?Style) !void {
+    pub fn setRepeatY(self: *@This(), x: u16, y: u16, count: usize, char: anytype, style: ?Style) void {
         for (0..count) |i| {
-            try self.set(x, y + @as(u16, @intCast(i)), char, style);
+            self.set(x, y + @as(u16, @intCast(i)), char, style);
         }
     }
 
     pub fn get(self: *const @This(), x: u16, y: u16) ?*const Cell {
         const pos: usize = @intCast((y * self.area.width) + x);
-        if (pos >= self.inner.len) return null;
+        if (x >= self.area.width or y >= self.area.height or pos >= self.inner.len) return null;
 
         return &self.inner[pos];
     }

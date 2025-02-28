@@ -123,7 +123,7 @@ const App = struct {
 
         if (self.message) |message| {
             // try buffer.setFormatted(x: u16, y: u16, item: anytype, style: ?Style)
-            try buffer.setSlice(
+            buffer.setSlice(
                 inner.x + @divFloor(inner.width, 2) - @as(u16, @intCast(@divFloor(message.len, 2))),
                 inner.y + @divFloor(inner.height, 2),
                 message,

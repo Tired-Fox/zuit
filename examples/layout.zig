@@ -107,6 +107,7 @@ const App = struct {
 
         const message = widget.Paragraph {
             .lines = &.{
+                widget.Line.empty(),
                 widget.Line.center(&.{ widget.Span.init("Hello, Zuit!") }),
                 widget.Line.empty(),
                 widget.Line.center(&.{
@@ -119,6 +120,7 @@ const App = struct {
                 }),
                 widget.Line.empty(),
                 widget.Line.center(&.{ widget.Span.styled("Press `Esc`, `Ctrl-C` or `q` to stop running.", .{ .italic = true }) }),
+                widget.Line.empty(),
             }
         };
         try message.render(buffer, vert[0]);

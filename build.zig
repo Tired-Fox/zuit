@@ -10,6 +10,7 @@ const examples = [_]Example {
     .{ .name = "main", .path = "examples/main.zig",  },
     .{ .name = "layout", .path = "examples/layout.zig",  },
     .{ .name = "text", .path = "examples/text.zig",  },
+    .{ .name = "bars", .path = "examples/bars.zig",  },
     .{ .name = "test", .path = "examples/test.zig",  },
 };
 

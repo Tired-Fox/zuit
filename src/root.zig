@@ -7,6 +7,7 @@ const getTermSize = @import("termz").action.getTermSize;
 
 pub const buffer = @import("./buffer.zig");
 pub const widget = @import("./widget.zig");
+pub const symbols = @import("./symbols.zig");
 
 pub const Buffer = buffer.Buffer;
 pub const Cell = buffer.Cell;

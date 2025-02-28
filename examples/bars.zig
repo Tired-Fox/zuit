@@ -3,6 +3,7 @@ const termz = @import("termz");
 const zuit = @import("zuit");
 
 const widget = zuit.widget;
+const symbols = zuit.symbols;
 
 const Cursor = termz.action.Cursor;
 const Screen = termz.action.Screen;
@@ -76,47 +77,25 @@ pub fn main() !void {
 }
 
 const App = struct {
-    pub fn render(area: zuit.Rect, buffer: *zuit.Buffer) !void {
-        try widget.Clear.render(buffer, area);
+    pub fn render(buffer: *zuit.Buffer, area: zuit.Rect) !void {
+        const vert = widget.Layout(2).vertical(.{
+            widget.Constraint.length(1),
+            widget.Constraint.fill(1),
+        }).split(area);
 
-        const v = widget.Layout(3)
-            .vertical(.{
-                widget.Constraint.length(3),
-                widget.Constraint.length(3),
-                widget.Constraint.fill(1),
-            })
-            .split(area);
+        const lg = widget.LineGauge {
+            .progress = 0.5,
+            .set = .{ .horizontal = '█' },
+            .filled_style = .{ .fg = Color.Green },
+            .unfilled_style = .{ .fg = Color.rgb(10, 20, 30) },
+        };
+        try lg.render(buffer, vert[0]);
 
-        const a = widget.Block.bordered();
-        try a.render(buffer, v[0]);
-        try widget.Span.styled("Hello, world", .{ .fg = Color.Red })
-            .render(buffer, a.inner(v[0]));
-
-        const b = widget.Block.bordered();
-        try b.render(buffer, v[1]);
-
-        try widget.Line.center(&.{
-            widget.Span.styled("┓┓┓┓┓ ", .{ .fg = Color.Magenta }),
-            widget.Span.styled("┓┓┓┓┓┓", .{ .fg = Color.Red }),
-        }).render(buffer, b.inner(v[1]));
-
-        const c = widget.Block.bordered();
-        try c.render(buffer, v[2]);
-        var special = c.inner(v[2]);
-        special.width = 8;
-
-        try (widget.Paragraph {
-            .lines = &.{
-                widget.Line.init(&[_]widget.Span{
-                    widget.Span.styled("  Hello, ", .{ .fg = Color.Red }),
-                    widget.Span.styled("world  ", .{ .fg = Color.Magenta }),
-                }),
-                widget.Line.init(&.{ widget.Span.init("  How are you?  ") }),
-                widget.Line.init(&.{ widget.Span.init("  Today?  ") })
-            },
-            .text_align = .Center,
-            .trim = true,
-            .wrap = true,
-        }).render(buffer, special);
+        const g = widget.Gauge {
+            .progress = 0.5,
+            .filled_style = .{ .fg = Color.Black, .bg = Color.Red },
+            .unfilled_style = .{ .fg = Color.Red },
+        };
+        try g.render(buffer, vert[1]);
     }
 };
