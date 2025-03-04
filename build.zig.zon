@@ -4,8 +4,8 @@
     .minimum_zig_version = "0.13.0",
     .dependencies = .{
         .termz = .{
-            .url = "git+https://github.com/Tired-Fox/termz#ddcf098b1ee3762c764e3fdea41a714cae2426da",
-            .hash = "122079b6161ef3b77558ca0ca43d6d9e39a75f0844643a4c52d24c90413840c76970",
+            .url = "git+https://github.com/Tired-Fox/termz#5f44e85c53e25da0deda91ee337c1d55767e76d8",
+            .hash = "1220eef338d05b80ad481ed62a39f09e8a6ec6a707e2c3fc7f1fad88f76710263a15",
         },
     },
     .paths = .{

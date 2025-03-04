@@ -2,7 +2,7 @@ const std = @import("std");
 
 const Style = @import("termz").style.Style;
 const Cursor = @import("termz").action.Cursor;
-const Source = @import("termz").Source;
+const Stream = @import("termz").Stream;
 const getTermSize = @import("termz").action.getTermSize;
 
 pub const buffer = @import("./buffer.zig");
@@ -19,7 +19,7 @@ pub const Terminal = struct {
     buffer: Buffer,
     previous: []Cell,
 
-    pub fn init(allo: std.mem.Allocator, source: Source) !@This() {
+    pub fn init(allo: std.mem.Allocator, source: Stream) !@This() {
         const cols, const rows = try getTermSize();
         return .{
             .buffer = try Buffer.init(allo, Rect{ .width = cols, .height = rows }),
