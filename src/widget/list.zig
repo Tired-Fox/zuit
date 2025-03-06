@@ -25,12 +25,7 @@ pub const List = struct {
 
         var pos = area;
         for (self.items) |item| {
-            try (Line {
-                .spans = item.spans,
-                .style = item.style orelse self.style,
-                .trim = item.trim,
-                .text_align = item.text_align,
-            }).render(buffer, pos);
+            try item.renderWithState(buffer, pos, .{ .style = self.style });
             pos.y += 1;
             if (pos.y > area.y + area.height - 1) break;
         }
@@ -50,48 +45,24 @@ pub const List = struct {
 
         var pos = Rect { .x = area.x + @as(u16, @intCast(self.highlight_symbol.len)) + 1, .y = area.y, .width = area.width, .height = area.height };
         for (self.items[min..current]) |item| {
-            try (Line {
-                .spans = item.spans,
-                .style = item.style orelse self.style,
-                .trim = item.trim,
-                .text_align = item.text_align,
-            }).render(buffer, pos);
+            try item.renderWithState(buffer, pos, .{ .style = self.style });
             pos.y += 1;
         }
 
-        buffer.setSlice(area.x, pos.y, self.highlight_symbol, self.highlight_style);
-        buffer.set(area.x + @as(u16, @intCast(self.highlight_symbol.len)), pos.y, ' ', self.highlight_style);
-        if (self.highlight_style) |hs| {
+        {
             const item = self.items[current];
-
-            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-            defer arena.deinit();
-            var spans = try arena.allocator().alloc(Span, item.spans.len);
-            for (item.spans, 0..) |span, i| {
-                spans[i] = .{
-                    .text = span.text,
-                    .style = hs,
-                };
+            buffer.setSlice(area.x, pos.y, self.highlight_symbol, self.highlight_style);
+            buffer.set(area.x + @as(u16, @intCast(self.highlight_symbol.len)), pos.y, ' ', self.highlight_style);
+            if (self.highlight_style) |hs| {
+                try item.renderWithState(buffer, pos, .{ .style = hs, .method = .override });
+            } else {
+                try item.render(buffer, pos);
             }
-
-            try (Line {
-                .spans = spans,
-                .text_align = item.text_align,
-                .trim = item.trim,
-                .style = hs
-            }).render(buffer, pos);
-        } else {
-            try self.items[current].render(buffer, pos);
+            pos.y += 1;
         }
-        pos.y += 1;
 
         for (self.items[current +| 1..max]) |item| {
-            try (Line {
-                .spans = item.spans,
-                .style = item.style orelse self.style,
-                .trim = item.trim,
-                .text_align = item.text_align,
-            }).render(buffer, pos);
+            try item.renderWithState(buffer, pos, .{ .style = self.style });
             pos.y += 1;
         }
     }

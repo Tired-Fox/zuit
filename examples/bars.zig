@@ -13,7 +13,6 @@ const getTermSize = termz.action.getTermSize;
 const EventStream = termz.event.EventStream;
 const KeyCode = termz.event.KeyCode;
 
-const Color = termz.style.Color;
 const Style = termz.style.Style;
 
 const Utf8ConsoleOutput = termz.Utf8ConsoleOutput;
@@ -21,7 +20,7 @@ const execute = termz.execute;
 
 fn setup() !void {
     try Screen.enableRawMode();
-    try execute(.Stdout, .{
+    try execute(.stdout, .{
         Screen.EnterAlternateBuffer,
         Cursor { .col = 1, .row = 1 },
         Cursor.Hide,
@@ -30,7 +29,7 @@ fn setup() !void {
 
 fn cleanup() !void {
     try Screen.disableRawMode();
-    try execute(.Stdout, .{
+    try execute(.stdout, .{
         Cursor.Show,
         Screen.LeaveAlternateBuffer,
     });
@@ -42,7 +41,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allo = gpa.allocator();
 
-    var term = try zuit.Terminal.init(allo, .Stdout);
+    var term = try zuit.Terminal.init(allo, .stdout);
     defer term.deinit();
 
     var stream = EventStream.init(allo);
@@ -61,14 +60,14 @@ pub fn main() !void {
         if (try stream.parseEvent()) |event| {
             switch (event) {
                 .key => |key| {
-                    if (key.matches(.{ .code = KeyCode.char('q') })) break;
-                    if (key.matches(.{ .code = KeyCode.char('c'), .ctrl = true })) break;
-                    if (key.matches(.{ .code = KeyCode.char('C'), .ctrl = true })) break;
+                    if (key.matches(.{ .code = .char('q') })) break;
+                    if (key.matches(.{ .code = .char('c'), .ctrl = true })) break;
+                    if (key.matches(.{ .code = .char('C'), .ctrl = true })) break;
 
-                    if (key.matches(.{ .code = KeyCode.Down, .kind = .press })) {
+                    if (key.matches(.{ .code = .down, .kind = .press })) {
                         app.list_state = @min(app.list_state + 1, 7);
                     }
-                    if (key.matches(.{ .code = KeyCode.Up, .kind = .press })) {
+                    if (key.matches(.{ .code = .up, .kind = .press })) {
                         app.list_state -|= 1;
                     }
                 },
@@ -88,25 +87,25 @@ const App = struct {
 
     pub fn render(self: *const @This(), buffer: *zuit.Buffer, area: zuit.Rect) !void {
         try widget.Clear.render(buffer, area);
-        const vert = widget.Layout(4).vertical(.{
-            widget.Constraint.length(1),
-            widget.Constraint.length(10),
-            widget.Constraint.length(1),
-            widget.Constraint.length(3),
+        const vert = widget.Layout(4).vertical(&.{
+            .{ .length = 1 },
+            .{ .length = 10 },
+            .{ .length = 1 },
+            .{ .length = 3 },
         }).split(area);
 
         const lg = widget.LineGauge {
             .progress = 0.5,
             .set = .{ .horizontal = '█' },
-            .filled_style = .{ .fg = Color.Green },
-            .unfilled_style = .{ .fg = Color.rgb(10, 20, 30) },
+            .filled_style = .{ .fg = .green },
+            .unfilled_style = .{ .fg = .rgb(10, 20, 30) },
         };
         try lg.render(buffer, vert[0]);
 
         const g = widget.Gauge {
             .progress = 0.5,
-            .filled_style = .{ .fg = Color.Black, .bg = Color.Red },
-            .unfilled_style = .{ .fg = Color.Red },
+            .filled_style = .{ .fg = .black, .bg = .red },
+            .unfilled_style = .{ .fg = .red },
         };
         try g.render(buffer, vert[1]);
 
@@ -122,16 +121,16 @@ const App = struct {
 
         const list = widget.List {
             .items = &.{
-                widget.Line.init(&.{ widget.Span.init("Line 1") }),
-                widget.Line.init(&.{ widget.Span.init("Line 2") }),
-                widget.Line.init(&.{ widget.Span.init("Line 3") }),
-                widget.Line.init(&.{ widget.Span.init("Line 4") }),
-                widget.Line.init(&.{ widget.Span.init("Line 5") }),
-                widget.Line.init(&.{ widget.Span.init("Line 6") }),
-                widget.Line.init(&.{ widget.Span.init("Line 7") }),
-                widget.Line.init(&.{ widget.Span.init("Line 8") }),
+                .init(&.{ .init("Line 1") }),
+                .init(&.{ .init("Line 2") }),
+                .init(&.{ .init("Line 3") }),
+                .init(&.{ .init("Line 4") }),
+                .init(&.{ .init("Line 5") }),
+                .init(&.{ .init("Line 6") }),
+                .init(&.{ .init("Line 7") }),
+                .init(&.{ .init("Line 8") }),
             },
-            .highlight_style = .{ .bg = Color.Yellow, .fg = Color.Black },
+            .highlight_style = .{ .bg = .yellow, .fg = .black },
             .highlight_symbol = ">",
         };
         try list.renderWithState(buffer, vert[3], self.list_state);

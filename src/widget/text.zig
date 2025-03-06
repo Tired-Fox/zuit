@@ -7,6 +7,28 @@ const Buffer = root.Buffer;
 const Rect = root.Rect;
 const Align = @import("../widget.zig").Align;
 
+pub const TextState = struct {
+    style: ?Style = null,
+    method: Method = .default,
+
+    pub const Method = enum {
+        merge,
+        override,
+        default,
+    };
+
+    pub fn getStyle(self: *const @This(), style: ?Style) ?Style {
+        switch (self.method) {
+            .default => return style orelse self.style,
+            .merge => return if (self.style != null and style != null)
+                style.?.Or(&self.style.?)
+            else
+                style orelse self.style,
+            .override => return self.style orelse style,
+        }
+    }
+};
+
 pub const Title = struct {
     text: []const u8,
     style: ?Style = null,
@@ -57,6 +79,10 @@ pub const Title = struct {
     };
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+        try self.renderWithState(buffer, area, .{});
+    }
+
+    pub fn renderWithState(self: *const @This(), buffer: *Buffer, area: Rect, state: TextState) !void {
         if (area.width == 0 or area.height == 0) return;
         // Renders and specific location regardless of border or other context
         // TopLeft────────────TopCenter───────────TopRight
@@ -68,28 +94,28 @@ pub const Title = struct {
         // │                                             │
         // BottomLeft───────BottomCenter───────BottomRight
         switch(self.position) {
-            .top_left => buffer.setSlice(area.x, area.y, self.text[0..@min(self.text.len, area.width -| 1)], self.style),
+            .top_left => buffer.setSlice(area.x, area.y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style)),
             .top_center => {
                 const x = @divFloor(area.width, 2) -| @divFloor(@as(u16, @intCast(self.text.len)), 2);
-                buffer.setSlice(x, 0, self.text[0..@min(self.text.len, area.width -| 1)], self.style);
+                buffer.setSlice(x, 0, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
             },
             .top_right => {
                 const x = area.width -| @as(u16, @intCast(self.text.len));
-                buffer.setSlice(x, 0, self.text[0..@min(self.text.len, area.width -| 1)], self.style);
+                buffer.setSlice(x, 0, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
             },
             .bottom_left => {
                 const y = area.y + area.height -| 1;
-                buffer.setSlice(area.x, y, self.text[0..@min(self.text.len, area.width -| 1)], self.style);
+                buffer.setSlice(area.x, y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
             },
             .bottom_center => {
                 const x = @divFloor(area.width, 2) -| @divFloor(@as(u16, @intCast(self.text.len)), 2);
                 const y = area.y + area.height -| 1;
-                buffer.setSlice(x, y, self.text[0..@min(self.text.len, area.width -| 1)], self.style);
+                buffer.setSlice(x, y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
             },
             .bottom_right => {
                 const x = area.width -| @as(u16, @intCast(self.text.len));
                 const y = area.y + area.height -| 1;
-                buffer.setSlice(x, y, self.text[0..@min(self.text.len, area.width -| 1)], self.style);
+                buffer.setSlice(x, y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
             },
         }
     }
@@ -114,6 +140,10 @@ pub const Span = struct {
     }
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+        try self.renderWithState(buffer, area, .{});
+    }
+
+    pub fn renderWithState(self: *const @This(), buffer: *Buffer, area: Rect, state: TextState) !void {
         if (area.width == 0 or area.height == 0) return;
         const max: usize = @intCast(area.width);
 
@@ -121,7 +151,7 @@ pub const Span = struct {
         var i: usize = 0;
         while (iter.nextCodepoint()) |codepoint| : (i += 1) {
             if (i >= max) break;
-            buffer.set(area.x + @as(u16, @intCast(i)), area.y, codepoint, self.style);
+            buffer.set(area.x + @as(u16, @intCast(i)), area.y, codepoint, state.getStyle(self.style));
         }
     }
 };
@@ -161,6 +191,10 @@ pub const Line = struct {
     }
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
+        try self.renderWithState(buffer, area, .{});
+    }
+
+    pub fn renderWithState(self: *const @This(), buffer: *Buffer, area: Rect, state: TextState) !void {
         if (area.width == 0 or area.height == 0) return;
         switch (self.text_align orelse Align.Start) {
             .Start => {
@@ -173,7 +207,7 @@ pub const Line = struct {
                     var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = text };
                     while (iter.nextCodepoint()) |codepoint| : (x +|= 1) {
                         if (x > max) break;
-                        buffer.set(x, area.y, codepoint, item.style orelse self.style);
+                        buffer.set(x, area.y, codepoint, state.getStyle(item.style orelse self.style));
                     }
 
                     if (x >= max) break;
@@ -227,7 +261,7 @@ pub const Line = struct {
                     const max: usize = @intCast(area.width);
                     while (iter.nextCodepoint()) |codepoint| {
                         if (x > max or e == 0) break;
-                        buffer.set(area.x + x, area.y, codepoint, item.style orelse self.style);
+                        buffer.set(area.x + x, area.y, codepoint, state.getStyle(item.style orelse self.style));
                         x +|= 1;
                         e -|= 1;
                     }
@@ -252,13 +286,13 @@ pub const Line = struct {
                         x = 0;
                         var a: u16 = 0;
                         while (iter.nextCodepoint()) |codepoint| : (a += 1) {
-                            buffer.set(area.x + a, area.y, codepoint, item.style orelse self.style);
+                            buffer.set(area.x + a, area.y, codepoint, state.getStyle(item.style orelse self.style));
                         }
                     } else {
                         var a: u16 = 0;
                         x -|= @intCast(size);
                         while (iter.nextCodepoint()) |codepoint| : (a += 1) {
-                            buffer.set(area.x + x + a, area.y, codepoint, item.style orelse self.style);
+                            buffer.set(area.x + x + a, area.y, codepoint, state.getStyle(item.style orelse self.style));
                         }
                     }
 
