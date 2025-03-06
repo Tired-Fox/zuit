@@ -172,15 +172,15 @@ pub const Line = struct {
     }
 
     pub fn start(spans: []const Span) @This() {
-        return .{ .spans = spans, .text_align = .Start };
+        return .{ .spans = spans, .text_align = .start };
     }
 
     pub fn center(spans: []const Span) @This() {
-        return .{ .spans = spans, .text_align = .Center };
+        return .{ .spans = spans, .text_align = .center };
     }
 
     pub fn end(spans: []const Span) @This() {
-        return .{ .spans = spans, .text_align = .End };
+        return .{ .spans = spans, .text_align = .end };
     }
 
     /// Utf8 codepoint length of the full line of text
@@ -196,8 +196,8 @@ pub const Line = struct {
 
     pub fn renderWithState(self: *const @This(), buffer: *Buffer, area: Rect, state: TextState) !void {
         if (area.width == 0 or area.height == 0) return;
-        switch (self.text_align orelse Align.Start) {
-            .Start => {
+        switch (self.text_align orelse Align.start) {
+            .start => {
                 // Truncate the end
                 var x: u16 = area.x;
                 for (self.spans, 0..) |item, i| {
@@ -213,7 +213,7 @@ pub const Line = struct {
                     if (x >= max) break;
                 }
             },
-            .Center => {
+            .center => {
                 // Truncate the both ends along will adding an x offset to center text
                 var total: usize = 0;
                 for (self.spans, 0..) |item, i| {
@@ -267,7 +267,7 @@ pub const Line = struct {
                     }
                 }
             },
-            .End => {
+            .end => {
                 // Truncate the beginning and push to the end of the line
                 var x: u16 = area.width;
                 var i: usize = self.spans.len - 1;
@@ -438,8 +438,8 @@ const LinkChunkIter = struct {
 
         pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
             if (area.width == 0 or area.height == 0) return;
-            switch (self.line.text_align orelse Align.Start) {
-                .Start => {
+            switch (self.line.text_align orelse Align.start) {
+                .start => {
                     // Truncate the end
                     var x: u16 = area.x;
                     for (self.line.spans, 0..) |item, i| {
@@ -458,7 +458,7 @@ const LinkChunkIter = struct {
                         if (x >= max) break;
                     }
                 },
-                .Center => {
+                .center => {
                     // Truncate the both ends along will adding an x offset to center text
                     var total: usize = 0;
                     for (self.line.spans, 0..) |item, i| {
@@ -515,7 +515,7 @@ const LinkChunkIter = struct {
                         }
                     }
                 },
-                .End => {
+                .end => {
                     // Truncate the beginning and push to the end of the line
                     var x: u16 = area.width;
                     var i: usize = self.line.spans.len - 1;

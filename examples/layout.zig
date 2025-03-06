@@ -10,7 +10,6 @@ const Capture = termz.action.Capture;
 const getTermSize = termz.action.getTermSize;
 
 const EventStream = termz.event.EventStream;
-const KeyCode = termz.event.KeyCode;
 
 const Utf8ConsoleOutput = termz.Utf8ConsoleOutput;
 const execute = termz.execute;

@@ -111,7 +111,7 @@ pub const Clear = struct {
 }{};
 
 pub const Align = enum {
-    Start,
-    Center,
-    End,
+    start,
+    center,
+    end,
 };

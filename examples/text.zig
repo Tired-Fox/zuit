@@ -10,9 +10,7 @@ const Capture = termz.action.Capture;
 const getTermSize = termz.action.getTermSize;
 
 const EventStream = termz.event.EventStream;
-const KeyCode = termz.event.KeyCode;
 
-const Color = termz.style.Color;
 const Style = termz.style.Style;
 
 const Utf8ConsoleOutput = termz.Utf8ConsoleOutput;
@@ -20,7 +18,7 @@ const execute = termz.execute;
 
 fn setup() !void {
     try Screen.enableRawMode();
-    try execute(.Stdout, .{
+    try execute(.stdout, .{
         Screen.EnterAlternateBuffer,
         Cursor { .col = 1, .row = 1 },
         Cursor.Hide,
@@ -29,7 +27,7 @@ fn setup() !void {
 
 fn cleanup() !void {
     try Screen.disableRawMode();
-    try execute(.Stdout, .{
+    try execute(.stdout, .{
         Cursor.Show,
         Screen.LeaveAlternateBuffer,
     });
@@ -41,7 +39,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allo = gpa.allocator();
 
-    var term = try zuit.Terminal.init(allo, .Stdout);
+    var term = try zuit.Terminal.init(allo, .stdout);
     defer term.deinit();
 
     var stream = EventStream.init(allo);
@@ -60,9 +58,9 @@ pub fn main() !void {
         if (try stream.parseEvent()) |event| {
             switch (event) {
                 .key => |key| {
-                    if (key.matches(.{ .code = KeyCode.char('q') })) break;
-                    if (key.matches(.{ .code = KeyCode.char('c'), .ctrl = true })) break;
-                    if (key.matches(.{ .code = KeyCode.char('C'), .ctrl = true })) break;
+                    if (key.matches(.{ .code = .char('q') })) break;
+                    if (key.matches(.{ .code = .char('c'), .ctrl = true })) break;
+                    if (key.matches(.{ .code = .char('C'), .ctrl = true })) break;
                 },
                 .resize => |resize| {
                     try term.resize(resize[0], resize[1]);
@@ -80,24 +78,24 @@ const App = struct {
         try widget.Clear.render(buffer, area);
 
         const v = widget.Layout(3)
-            .vertical(.{
-                widget.Constraint.length(3),
-                widget.Constraint.length(3),
-                widget.Constraint.fill(1),
+            .vertical(&.{
+                .{ .length = 3 },
+                .{ .length = 3 },
+                .{ .fill = 1 },
             })
             .split(area);
 
         const a = widget.Block.bordered();
         try a.render(buffer, v[0]);
-        try widget.Span.styled("Hello, world", .{ .fg = Color.Red })
+        try widget.Span.styled("Hello, world", .{ .fg = .red })
             .render(buffer, a.inner(v[0]));
 
         const b = widget.Block.bordered();
         try b.render(buffer, v[1]);
 
         try widget.Line.center(&.{
-            widget.Span.styled("┓┓┓┓┓ ", .{ .fg = Color.Magenta }),
-            widget.Span.styled("┓┓┓┓┓┓", .{ .fg = Color.Red }),
+            .styled("┓┓┓┓┓ ", .{ .fg = .magenta }),
+            .styled("┓┓┓┓┓┓", .{ .fg = .red }),
         }).render(buffer, b.inner(v[1]));
 
         const c = widget.Block.bordered();
@@ -108,13 +106,13 @@ const App = struct {
         try (widget.Paragraph {
             .lines = &.{
                 widget.Line.init(&[_]widget.Span{
-                    widget.Span.styled("  Hello, ", .{ .fg = Color.Red }),
-                    widget.Span.styled("world  ", .{ .fg = Color.Magenta }),
+                    widget.Span.styled("  Hello, ", .{ .fg = .red }),
+                    widget.Span.styled("world  ", .{ .fg = .magenta }),
                 }),
-                widget.Line.init(&.{ widget.Span.init("  How are you?  ") }),
-                widget.Line.init(&.{ widget.Span.init("  Today?  ") })
+                .init(&.{ .init("  How are you?  ") }),
+                .init(&.{ .init("  Today?  ") })
             },
-            .text_align = .Center,
+            .text_align = .center,
             .trim = true,
             .wrap = true,
         }).render(buffer, special);
