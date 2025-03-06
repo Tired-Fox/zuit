@@ -10,6 +10,7 @@ const examples = [_]Example {
     .{ .name = "layout", .path = "examples/layout.zig",  },
     .{ .name = "text", .path = "examples/text.zig",  },
     .{ .name = "bars", .path = "examples/bars.zig",  },
+    .{ .name = "container", .path = "examples/container.zig",  },
 };
 
 pub fn build(b: *std.Build) void {

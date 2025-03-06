@@ -9,8 +9,8 @@
 - [x] Gauge
 - [x] LineGuage
 - [x] Scrollbar
-- [ ] List
-- [ ] Table
+- [x] List
+- [x] Table
 - [ ] Tabs
 - [ ] BarChart
 - [ ] Chart

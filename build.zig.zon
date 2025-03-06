@@ -5,7 +5,7 @@
     .minimum_zig_version = "0.14.0",
     .dependencies = .{
         .termz = .{
-            .path = "../term",
+            .path = "../termz",
         },
     },
     .paths = .{

@@ -126,7 +126,7 @@ pub const Span = struct {
     text: []const u8,
     style: ?Style = null,
 
-    pub fn init(text: []const u8) @This() {
+    pub fn raw(text: []const u8) @This() {
         return .{ .text = text };
     }
 
@@ -166,10 +166,6 @@ pub const Line = struct {
     trim: bool = false,
 
     pub const empty: @This() = .{ .spans = &.{} };
-
-    pub fn init(spans: []const Span) @This() {
-        return .{ .spans = spans };
-    }
 
     pub fn start(spans: []const Span) @This() {
         return .{ .spans = spans, .text_align = .start };
@@ -325,10 +321,6 @@ pub const Paragraph = struct {
     trim: bool = false,
     text_align: ?Align = null,
     style: ?Style = null,
-
-    pub fn init(value: anytype) @This() {
-        return .{ .lines = value };
-    }
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
         if (area.width == 0 or area.height == 0) return;
