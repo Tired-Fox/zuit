@@ -63,13 +63,6 @@ pub fn main() !void {
                     if (key.matches(.{ .code = .char('q') })) break;
                     if (key.matches(.{ .code = .char('c'), .ctrl = true })) break;
                     if (key.matches(.{ .code = .char('C'), .ctrl = true })) break;
-
-                    if (key.matches(.{ .code = .down, .kind = .press })) {
-                        app.list_state = @min(app.list_state + 1, 7);
-                    }
-                    if (key.matches(.{ .code = .up, .kind = .press })) {
-                        app.list_state -|= 1;
-                    }
                 },
                 .resize => |resize| {
                     try term.resize(resize[0], resize[1]);
@@ -83,9 +76,7 @@ pub fn main() !void {
 }
 
 const App = struct {
-    list_state: usize = 0,
-
-    pub fn render(self: *const @This(), buffer: *zuit.Buffer, area: zuit.Rect) !void {
+    pub fn render(buffer: *zuit.Buffer, area: zuit.Rect) !void {
         try widget.Clear.render(buffer, area);
         const vert = widget.Layout(4).vertical(&.{
             .{ .length = 1 },
@@ -118,21 +109,5 @@ const App = struct {
             .orientation = .HorizontalTop,
         };
         try sb.renderWithState(buffer, vert[2], &ss);
-
-        const list = widget.List {
-            .items = &.{
-                .init(&.{ .init("Line 1") }),
-                .init(&.{ .init("Line 2") }),
-                .init(&.{ .init("Line 3") }),
-                .init(&.{ .init("Line 4") }),
-                .init(&.{ .init("Line 5") }),
-                .init(&.{ .init("Line 6") }),
-                .init(&.{ .init("Line 7") }),
-                .init(&.{ .init("Line 8") }),
-            },
-            .highlight_style = .{ .bg = .yellow, .fg = .black },
-            .highlight_symbol = ">",
-        };
-        try list.renderWithState(buffer, vert[3], self.list_state);
     }
 };

@@ -10,7 +10,9 @@
 - [x] LineGuage
 - [x] Scrollbar
 - [x] List
+    - [ ] Multiline
 - [x] Table
+    - [ ] Multiline
 - [ ] Tabs
 - [ ] BarChart
 - [ ] Chart

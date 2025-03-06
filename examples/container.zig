@@ -134,55 +134,22 @@ const App = struct {
         try list.renderWithState(buffer, vert[0], self.list_state);
 
         const table = widget.Table(3) {
-            .constraints = .{
-                .{ .fill = 1 },
-                .{ .fill = 1 },
-                .{ .fill = 1 },
-            },
+            .constraints = @splat(.{ .fill = 1 }),
             .header = .{
-                .cells = .{
-                    .start(&.{ .raw("Left") }),
-                    .center(&.{ .raw("Middle") }),
-                    .end(&.{ .raw("Right") }),
-                },
-                .bottom_margin = 1
+                .columns = .{ .start(&.{ .raw("Left") }), .center(&.{ .raw("Middle") }), .end(&.{ .raw("Right") }) },
+                .margin = .{ .bottom = 1 },
             },
-            .footer = .{ .cells = .{
-                .start(&.{ .raw("Updated Dec 28") }),
-                .empty,
-                .empty,
-            }},
+            .footer = .{
+                .columns = .{ .start(&.{ .raw("Updated Dec 28") }), .empty, .empty }
+            },
             .rows = &.{
+                .raw(.{ .start(&.{ .raw("a") }), .center(&.{ .raw("b") }), .end(&.{ .raw("c") }) }),
                 .{
-                    .cells = .{
-                        .start(&.{ .raw("a") }),
-                        .center(&.{ .raw("b") }),
-                        .end(&.{ .raw("c") }),
-                    },
+                    .columns = .{ .start(&.{ .raw("d") }), .center(&.{ .raw("e") }), .end(&.{ .raw("f") }) },
+                    .margin = .symmetric(1),
                 },
-                .{
-                    .cells = .{
-                        .start(&.{ .raw("d") }),
-                        .center(&.{ .raw("e") }),
-                        .end(&.{ .raw("f") }),
-                    },
-                    .top_margin = 1,
-                    .bottom_margin = 1,
-                },
-                .{
-                    .cells = .{
-                        .start(&.{ .raw("g") }),
-                        .center(&.{ .raw("h") }),
-                        .end(&.{ .raw("i") }),
-                    },
-                },
-                .{
-                    .cells = .{
-                        .start(&.{ .raw("j") }),
-                        .center(&.{ .raw("k") }),
-                        .end(&.{ .raw("l") }),
-                    },
-                }
+                .raw(.{ .start(&.{ .raw("g") }), .center(&.{ .raw("h") }), .end(&.{ .raw("i") }) }),
+                .raw(.{ .start(&.{ .raw("j") }), .center(&.{ .raw("k") }), .end(&.{ .raw("l") }) })
             },
             .style = .{ .fg = .blue },
             .row_highlight_style = .{ .bg = .xterm(.grey_7) },
