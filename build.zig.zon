@@ -1,12 +1,12 @@
 .{
     .name = .zuit,
     .version = "0.0.0",
-    .fingerprint = 0x94ab50946fa6f202,
+    .fingerprint = 0x94ab50946fa6f202, // Changing this has security and trust implications.
     .minimum_zig_version = "0.14.0",
     .dependencies = .{
-        .termz = .{
-            .url = "git+https://github.com/Tired-Fox/termz#0758b571e3ff992f4086aa3541d7f35a871757a2",
-            .hash = "termz-0.0.0-_ue8XbjmAQAL4llVqa-HyXsVt_Loa_rxpoPcWQUSL-b2",
+        .zerm = .{
+            .url = "git+https://github.com/Tired-Fox/zerm#68fbadb4d0209d4db0bbc286b650c0917d537c14",
+            .hash = "zerm-0.0.1-4QSLcpzeAQCPwUCEt3l3OAN8VQkZpVGEexoDVeRqLXfT",
         },
     },
     .paths = .{

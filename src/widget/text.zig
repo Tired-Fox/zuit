@@ -1,8 +1,8 @@
 const std = @import("std");
-const termz = @import("termz");
+const zerm = @import("zerm");
 const root = @import("../root.zig");
 
-const Style = termz.style.Style;
+const Style = zerm.style.Style;
 const Buffer = root.Buffer;
 const Rect = root.Rect;
 const Align = @import("../widget.zig").Align;
@@ -21,7 +21,7 @@ pub const TextState = struct {
         switch (self.method) {
             .default => return style orelse self.style,
             .merge => return if (self.style != null and style != null)
-                style.?.Or(&self.style.?)
+                style.?.merge(&self.style.?)
             else
                 style orelse self.style,
             .override => return self.style orelse style,
@@ -166,6 +166,10 @@ pub const Line = struct {
     trim: bool = false,
 
     pub const empty: @This() = .{ .spans = &.{} };
+
+    pub fn init(spans: []const Span) @This() {
+        return .{ .spans = spans };
+    }
 
     pub fn start(spans: []const Span) @This() {
         return .{ .spans = spans, .text_align = .start };
@@ -327,6 +331,12 @@ pub const Paragraph = struct {
         var pos = area;
         if (self.wrap) {
             outer: for (self.lines) |line| {
+                if (line.spans.len == 0) {
+                    pos.y = @min(pos.y + 1, pos.height);
+                    if (pos.y == pos.height) break
+                    else continue;
+                }
+
                 const l = Line {
                     .spans = line.spans,
                     .style = line.style orelse self.style,

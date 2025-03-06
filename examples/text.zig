@@ -1,35 +1,34 @@
 const std = @import("std");
-const termz = @import("termz");
+const zerm = @import("zerm");
 const zuit = @import("zuit");
 
 const widget = zuit.widget;
 
-const Cursor = termz.action.Cursor;
-const Screen = termz.action.Screen;
-const Capture = termz.action.Capture;
-const getTermSize = termz.action.getTermSize;
+const Cursor = zerm.action.Cursor;
+const Screen = zerm.action.Screen;
+const Capture = zerm.action.Capture;
+const getTermSize = zerm.action.getTermSize;
 
-const EventStream = termz.event.EventStream;
+const EventStream = zerm.event.EventStream;
 
-const Style = termz.style.Style;
+const Style = zerm.style.Style;
 
-const Utf8ConsoleOutput = termz.Utf8ConsoleOutput;
-const execute = termz.execute;
+const Utf8ConsoleOutput = zerm.Utf8ConsoleOutput;
+const execute = zerm.execute;
 
 fn setup() !void {
     try Screen.enableRawMode();
     try execute(.stdout, .{
-        Screen.EnterAlternateBuffer,
-        Cursor { .col = 1, .row = 1 },
-        Cursor.Hide,
+        Screen.enter_alternate_buffer,
+        Cursor { .col = 1, .row = 1, .visibility = .hidden },
     });
 }
 
 fn cleanup() !void {
     try Screen.disableRawMode();
     try execute(.stdout, .{
-        Cursor.Show,
-        Screen.LeaveAlternateBuffer,
+        Cursor { .visibility = .visible },
+        Screen.leave_alternate_buffer,
     });
 }
 
@@ -58,9 +57,11 @@ pub fn main() !void {
         if (try stream.parseEvent()) |event| {
             switch (event) {
                 .key => |key| {
-                    if (key.matches(.{ .code = .char('q') })) break;
-                    if (key.matches(.{ .code = .char('c'), .ctrl = true })) break;
-                    if (key.matches(.{ .code = .char('C'), .ctrl = true })) break;
+                    if (key.matches(&.{ 
+                        .{ .code = .char('q') },
+                        .{ .code = .char('c'), .ctrl = true },
+                        .{ .code = .char('C'), .ctrl = true }
+                    })) break;
                 },
                 .resize => |resize| {
                     try term.resize(resize[0], resize[1]);
@@ -73,48 +74,70 @@ pub fn main() !void {
     }
 }
 
+const a: []const u8 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis viverra orci et quam blandit tempus ac accumsan turpis. Donec non magna tincidunt, semper metus a, feugiat nisi. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Quisque egestas lobortis leo quis porta. Aenean non dui lorem. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Quisque non ex dignissim, vehicula mauris non, luctus magna.";
+
+const b: []const u8 = "Duis pellentesque, tortor a interdum eleifend, dolor justo interdum sem, sed rutrum felis ante id velit. Duis feugiat eleifend imperdiet. Integer vehicula pretium velit, non scelerisque lacus mattis sed. Donec venenatis id ligula a lobortis. Nullam quis nulla lobortis, ornare mauris sit amet, porta tellus. Suspendisse scelerisque, tortor vel blandit luctus, eros justo vehicula purus, eu egestas nulla lectus a mi. Vestibulum mollis elementum metus, eu ultrices ligula condimentum non.";
+
+const c: [5][]const u8 = .{
+    "Suspendisse turpis eros, fringilla gravida ipsum ac, ",
+    "lacinia suscipit erat. Duis in faucibus",
+    " leo. Cras id lorem nunc. Interdum et malesuada fames ac ante ipsum primis in faucibus. ",
+    "Morbi rutrum nunc eu nulla placerat",
+    ", sit amet porttitor est mollis. Nulla pretium nulla laoreet ex commodo, vel imperdiet turpis pharetra. Aenean at eros sit amet velit dignissim blandit ac sed tellus. Vestibulum sed ex neque. Praesent non libero vel nulla accumsan sollicitudin ut eget risus. Mauris iaculis suscipit sem pulvinar elementum. Aliquam auctor tristique velit, in gravida tortor cursus vitae."
+};
+
 const App = struct {
     pub fn render(area: zuit.Rect, buffer: *zuit.Buffer) !void {
         try widget.Clear.render(buffer, area);
 
-        const v = widget.Layout(3)
+        const v = widget.Layout(4)
             .vertical(&.{
+                .{ .length = 3 },
                 .{ .length = 3 },
                 .{ .length = 3 },
                 .{ .fill = 1 },
             })
             .split(area);
 
-        const a = widget.Block.bordered();
-        try a.render(buffer, v[0]);
-        try widget.Span.styled("Hello, world", .{ .fg = .red })
-            .render(buffer, a.inner(v[0]));
+        const block_a = widget.Block.bordered();
+        try block_a.render(buffer, v[0]);
+        try widget.Span.styled("Start", .{ .fg = .red })
+            .render(buffer, block_a.inner(v[0]));
 
-        const b = widget.Block.bordered();
-        try b.render(buffer, v[1]);
+        const block_b = widget.Block.bordered();
+        try block_b.render(buffer, v[1]);
 
         try widget.Line.center(&.{
-            .styled("┓┓┓┓┓ ", .{ .fg = .magenta }),
-            .styled("┓┓┓┓┓┓", .{ .fg = .red }),
-        }).render(buffer, b.inner(v[1]));
+            .styled("｢ ", .{ .fg = .magenta }),
+            .raw("Centered"),
+            .styled(" ｣", .{ .fg = .red }),
+        }).render(buffer, block_b.inner(v[1]));
 
-        const c = widget.Block.bordered();
-        try c.render(buffer, v[2]);
-        var special = c.inner(v[2]);
-        special.width = 8;
+        const block_c = widget.Block.bordered();
+        try block_c.render(buffer, v[2]);
 
+        try widget.Line.end(&.{
+            .raw("End"),
+        }).render(buffer, block_c.inner(v[2]));
+
+        const block_d = widget.Block.bordered();
+        try block_d.render(buffer, v[3]);
+
+        const hl = Style{ .bg = .yellow, .fg = .black };
         try (widget.Paragraph {
             .lines = &.{
-                widget.Line.init(&[_]widget.Span{
-                    widget.Span.styled("  Hello, ", .{ .fg = .red }),
-                    widget.Span.styled("world  ", .{ .fg = .magenta }),
+                .init(&.{ .styled(a, .{ .fg = .red }) }),
+                .empty,
+                .init(&.{ .raw(b) }),
+                .empty,
+                .init(&.{
+                    .raw(c[0]), .styled(c[1], hl), .raw(c[2]),
+                    .styled(c[3], hl), .raw(c[4])
                 }),
-                .init(&.{ .init("  How are you?  ") }),
-                .init(&.{ .init("  Today?  ") })
             },
             .text_align = .center,
             .trim = true,
             .wrap = true,
-        }).render(buffer, special);
+        }).render(buffer, block_d.inner(v[3]));
     }
 };

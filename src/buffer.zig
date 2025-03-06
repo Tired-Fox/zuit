@@ -1,8 +1,8 @@
 const std = @import("std");
-const termz = @import("termz");
+const zerm = @import("zerm");
 
-const Style = termz.style.Style;
-const Cursor = termz.action.Cursor;
+const Style = zerm.style.Style;
+const Cursor = zerm.action.Cursor;
 
 const Rect = @import("./root.zig").Rect;
 const renderComponent = @import("./root.zig").renderComponent;

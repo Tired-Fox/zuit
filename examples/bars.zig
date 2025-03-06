@@ -1,37 +1,36 @@
 const std = @import("std");
-const termz = @import("termz");
+const zerm = @import("zerm");
 const zuit = @import("zuit");
 
 const widget = zuit.widget;
 const symbols = zuit.symbols;
 
-const Cursor = termz.action.Cursor;
-const Screen = termz.action.Screen;
-const Capture = termz.action.Capture;
-const getTermSize = termz.action.getTermSize;
+const Cursor = zerm.action.Cursor;
+const Screen = zerm.action.Screen;
+const Capture = zerm.action.Capture;
+const getTermSize = zerm.action.getTermSize;
 
-const EventStream = termz.event.EventStream;
-const KeyCode = termz.event.KeyCode;
+const EventStream = zerm.event.EventStream;
+const KeyCode = zerm.event.KeyCode;
 
-const Style = termz.style.Style;
+const Style = zerm.style.Style;
 
-const Utf8ConsoleOutput = termz.Utf8ConsoleOutput;
-const execute = termz.execute;
+const Utf8ConsoleOutput = zerm.Utf8ConsoleOutput;
+const execute = zerm.execute;
 
 fn setup() !void {
     try Screen.enableRawMode();
     try execute(.stdout, .{
-        Screen.EnterAlternateBuffer,
-        Cursor { .col = 1, .row = 1 },
-        Cursor.Hide,
+        Screen.enter_alternate_buffer,
+        Cursor { .col = 1, .row = 1, .visibility = .hidden },
     });
 }
 
 fn cleanup() !void {
     try Screen.disableRawMode();
     try execute(.stdout, .{
-        Cursor.Show,
-        Screen.LeaveAlternateBuffer,
+        Cursor { .visibility = .visible },
+        Screen.leave_alternate_buffer,
     });
 }
 
@@ -60,9 +59,11 @@ pub fn main() !void {
         if (try stream.parseEvent()) |event| {
             switch (event) {
                 .key => |key| {
-                    if (key.matches(.{ .code = .char('q') })) break;
-                    if (key.matches(.{ .code = .char('c'), .ctrl = true })) break;
-                    if (key.matches(.{ .code = .char('C'), .ctrl = true })) break;
+                    if (key.matches(&.{
+                        .{ .code = .char('q') },
+                        .{ .code = .char('c'), .ctrl = true },
+                        .{ .code = .char('C'), .ctrl = true },
+                    })) break;
                 },
                 .resize => |resize| {
                     try term.resize(resize[0], resize[1]);

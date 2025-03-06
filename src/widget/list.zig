@@ -1,9 +1,9 @@
 const std = @import("std");
-const termz = @import("termz");
+const zerm = @import("zerm");
 const widgets = @import("../widget.zig");
 const root = @import("../root.zig");
 
-const Style = termz.style.Style;
+const Style = zerm.style.Style;
 
 const Buffer = root.Buffer;
 const Rect = root.Rect;

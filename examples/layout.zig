@@ -1,33 +1,33 @@
 const std = @import("std");
-const termz = @import("termz");
+const zerm = @import("zerm");
 const zuit = @import("zuit");
 
 const widget = zuit.widget;
 
-const Cursor = termz.action.Cursor;
-const Screen = termz.action.Screen;
-const Capture = termz.action.Capture;
-const getTermSize = termz.action.getTermSize;
+const Cursor = zerm.action.Cursor;
+const Screen = zerm.action.Screen;
+const Capture = zerm.action.Capture;
+const getTermSize = zerm.action.getTermSize;
 
-const EventStream = termz.event.EventStream;
+const EventStream = zerm.event.EventStream;
 
-const Utf8ConsoleOutput = termz.Utf8ConsoleOutput;
-const execute = termz.execute;
+const Utf8ConsoleOutput = zerm.Utf8ConsoleOutput;
+const execute = zerm.execute;
 
 fn setup() !void {
     try Screen.enableRawMode();
     try execute(.stdout, .{
-        Screen.EnterAlternateBuffer,
+        Screen.enter_alternate_buffer,
         Cursor { .col = 1, .row = 1 },
-        Cursor.Hide,
+        Cursor { .visibility = .hidden },
     });
 }
 
 fn cleanup() !void {
     try Screen.disableRawMode();
     try execute(.stdout, .{
-        Cursor.Show,
-        Screen.LeaveAlternateBuffer,
+        Cursor { .visibility = .visible },
+        Screen.leave_alternate_buffer,
     });
 }
 
@@ -56,10 +56,12 @@ pub fn main() !void {
         if (try stream.parseEvent()) |event| {
             switch (event) {
                 .key => |key| {
-                    if (key.matches(.{ .code = .esc })) break;
-                    if (key.matches(.{ .code = .char('c'), .ctrl = true })) break;
-                    if (key.matches(.{ .code = .char('C'), .ctrl = true })) break;
-                    if (key.matches(.{ .code = .char('q') })) break;
+                    if (key.matches(&.{ 
+                        .{ .code = .esc },
+                        .{ .code = .char('c'), .ctrl = true },
+                        .{ .code = .char('C'), .ctrl = true },
+                        .{ .code = .char('q') }
+                    })) break;
                 },
                 .resize => |resize| {
                     try term.resize(resize[0], resize[1]);
@@ -104,15 +106,15 @@ const App = struct {
         const message = widget.Paragraph {
             .lines = &.{
                 .empty,
-                .center(&.{ .init("Hello, Zuit!") }),
+                .center(&.{ .raw("Hello, Zuit!") }),
                 .empty,
                 .center(&.{
-                    .init("Repository: "),
+                    .raw("Repository: "),
                     .styled("https://github.com/Tired-Fox/zuit", .{ .fg = .green, .mod = .{ .underline = .single } })
                 }),
                 .center(&.{
-                    .init("Terminal API: "),
-                    .styled("https://github.com/Tired-Fox/termz", .{ .fg = .green, .mod = .{ .underline = .single } })
+                    .raw("Terminal API: "),
+                    .styled("https://github.com/Tired-Fox/zerm", .{ .fg = .green, .mod = .{ .underline = .single } })
                 }),
                 .empty,
                 .center(&.{ .styled("Press `Esc`, `Ctrl-C` or `q` to stop running.", .italic) }),

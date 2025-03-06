@@ -1,11 +1,11 @@
 const std = @import("std");
-pub const termz = @import("termz");
+pub const zerm = @import("zerm");
 pub const symbols = @import("../symbols.zig");
 pub const root = @import("../root.zig");
 
 pub const Buffer = root.Buffer;
 pub const Rect = root.Rect;
-pub const Style = termz.style.Style;
+pub const Style = zerm.style.Style;
 
 pub const Set = symbols.line.Set;
 

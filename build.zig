@@ -18,10 +18,10 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // Dependencies
-    const termz_mod = b.dependency("termz", .{}).module("termz");
+    const zerm_mod = b.dependency("zerm", .{}).module("zerm");
 
     const module = b.addModule("zuit", .{ .root_source_file = b.path("src/root.zig") });
-    module.addImport("termz", termz_mod);
+    module.addImport("zerm", zerm_mod);
 
     const lib_unit_tests = b.addTest(.{
         .root_source_file = b.path("src/root.zig"),
@@ -30,7 +30,7 @@ pub fn build(b: *std.Build) void {
     });
 
     lib_unit_tests.root_module.addImport("zuit", module);
-    lib_unit_tests.root_module.addImport("termz", termz_mod);
+    lib_unit_tests.root_module.addImport("zerm", zerm_mod);
 
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
     const test_step = b.step("test", "Run unit tests");
@@ -39,7 +39,7 @@ pub fn build(b: *std.Build) void {
     inline for (examples) |example| {
         addExample(b, target, optimize, example, &[_]ModuleMap{
             .{ "zuit", module },
-            .{ "termz", termz_mod },
+            .{ "zerm", zerm_mod },
         });
     }
 }

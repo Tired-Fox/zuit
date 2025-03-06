@@ -1,9 +1,9 @@
 const symbols = @import("../symbols.zig");
 
-const termz = @import("termz");
+const zerm = @import("zerm");
 const root = @import("../root.zig");
 
-const Style = termz.style.Style;
+const Style = zerm.style.Style;
 const Buffer = root.Buffer;
 const Rect = root.Rect;
 

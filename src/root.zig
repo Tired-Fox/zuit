@@ -1,9 +1,10 @@
 const std = @import("std");
+const zerm = @import("zerm");
 
-const Style = @import("termz").style.Style;
-const Cursor = @import("termz").action.Cursor;
-const Stream = @import("termz").Stream;
-const getTermSize = @import("termz").action.getTermSize;
+const Style = zerm.style.Style;
+const Cursor = zerm.action.Cursor;
+const Stream = zerm.Stream;
+const getTermSize = zerm.action.getTermSize;
 
 pub const buffer = @import("./buffer.zig");
 pub const widget = @import("./widget.zig");

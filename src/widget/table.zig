@@ -1,9 +1,9 @@
 const std = @import("std");
-const termz = @import("termz");
+const zerm = @import("zerm");
 const widgets = @import("../widget.zig");
 const root = @import("../root.zig");
 
-const Style = termz.style.Style;
+const Style = zerm.style.Style;
 
 const Buffer = root.Buffer;
 const Rect = root.Rect;
@@ -73,7 +73,7 @@ pub fn Table(N: usize) type {
 
             const layout = Layout(N).horizontalWithSpacing(self.spacing, &self.constraints);
             if (self.header) |header| {
-                const style = self.style.Or(&header.style);
+                const style = self.style.merge(&header.style);
                 buffer.setRepeatX(area.x, area.y, area.width, ' ', style);
                 for (header.columns) |th| {
                     try th.renderWithState(buffer, area, .{ .style = style, .method = .merge });
@@ -93,7 +93,7 @@ pub fn Table(N: usize) type {
                 pos.y += row.margin.top;
                 if (pos.y >= area.y + area.height) break;
 
-                const style = self.style.Or(&row.style);
+                const style = self.style.merge(&row.style);
                 const cells = layout.split(pos);
                 for (row.columns, cells) |td, cell| {
                     try td.renderWithState(buffer, cell, .{ .style = style });
@@ -104,7 +104,7 @@ pub fn Table(N: usize) type {
             }
 
             if (self.footer) |footer| {
-                const style = self.style.Or(&footer.style);
+                const style = self.style.merge(&footer.style);
                 buffer.setRepeatX(area.x, area.y + area.height - 1, area.width, ' ', style);
                 const f = Rect {
                     .x = area.x,
@@ -155,7 +155,7 @@ pub fn Table(N: usize) type {
             }
 
             if (self.header) |header| {
-                const style = self.style.Or(&header.style);
+                const style = self.style.merge(&header.style);
                 buffer.setRepeatX(area.x, area.y, area.width, ' ', style);
                 const h = Rect { .x = area.x + hlw, .y = area.y, .width = area.width -| hlw, .height = area.height };
                 for (header.columns) |th| {
@@ -168,10 +168,10 @@ pub fn Table(N: usize) type {
                 if (pos.y >= area.y + area.height) break;
 
                 const cells = layout.split(pos);
-                const style = self.style.Or(&row.style);
+                const style = self.style.merge(&row.style);
                 for (row.columns, cells, 0..) |td, cell, i| {
                     if (state.column != null and state.column.? == @as(u16, @intCast(i)) and self.column_highlight_style != null) {
-                        try td.renderWithState(buffer, cell, .{ .style = self.column_highlight_style.?.Or(&style), .method = .override });
+                        try td.renderWithState(buffer, cell, .{ .style = self.column_highlight_style.?.merge(&style), .method = .override });
                     } else {
                         try td.renderWithState(buffer, cell, .{ .style = style });
                     }
@@ -187,7 +187,7 @@ pub fn Table(N: usize) type {
                 if (pos.y >= area.y + area.height) break :current;
 
                 const cells = layout.split(pos);
-                const style = self.style.Or(&self.rows[current].style);
+                const style = self.style.merge(&self.rows[current].style);
 
                 buffer.setRepeatX(area.x, pos.y, area.width, ' ', if (self.row_highlight_style) |rhl| rhl else style);
                 buffer.setSlice(area.x, pos.y, self.highlight_symbol, self.row_highlight_style orelse style);
@@ -199,7 +199,7 @@ pub fn Table(N: usize) type {
                     }
 
                     if (highlight) |hl| {
-                        try td.renderWithState(buffer, cell, .{ .style = hl.Or(&style), .method = .override });
+                        try td.renderWithState(buffer, cell, .{ .style = hl.merge(&style), .method = .override });
                     } else {
                         try td.renderWithState(buffer, cell, .{ .style = style });
                     }
@@ -213,10 +213,10 @@ pub fn Table(N: usize) type {
                 if (pos.y >= area.y + area.height) break;
 
                 const cells = layout.split(pos);
-                const style = self.style.Or(&row.style);
+                const style = self.style.merge(&row.style);
                 for (row.columns, cells, 0..) |td, cell, i| {
                     if (state.column != null and state.column.? == @as(u16, @intCast(i)) and self.column_highlight_style != null) {
-                        try td.renderWithState(buffer, cell, .{ .style = self.column_highlight_style.?.Or(&style), .method = .override });
+                        try td.renderWithState(buffer, cell, .{ .style = self.column_highlight_style.?.merge(&style), .method = .override });
                     } else {
                         try td.renderWithState(buffer, cell, .{ .style = style });
                     }
@@ -227,7 +227,7 @@ pub fn Table(N: usize) type {
             }
 
             if (self.footer) |footer| {
-                const style = self.style.Or(&footer.style);
+                const style = self.style.merge(&footer.style);
                 buffer.setRepeatX(area.x, area.y + area.height - 1, area.width, ' ', style);
                 const f = Rect {
                     .x = area.x + hlw,
