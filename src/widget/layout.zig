@@ -8,6 +8,8 @@ pub fn Layout(comptime N: usize) type {
         constraints: [N]Constraint,
         direction: Direction,
 
+        spacing: u16 = 0,
+
         pub fn horizontal(constraints: anytype) @This() {
             var values: [N]Constraint = undefined;
             inline for (constraints, 0..) |constraint, i| values[i] = constraint;
@@ -17,10 +19,30 @@ pub fn Layout(comptime N: usize) type {
             };
         }
 
-        pub fn vertical(constraints: anytype) @This() {
+        pub fn vertical(constraints: []const Constraint) @This() {
+            var values: [N]Constraint = undefined;
+            for (constraints, 0..) |constraint, i| values[i] = constraint;
+            return .{
+                .direction = .Vertical,
+                .constraints = values,
+            };
+        }
+
+        pub fn horizontalWithSpacing(space: u16, constraints: anytype) @This() {
             var values: [N]Constraint = undefined;
             inline for (constraints, 0..) |constraint, i| values[i] = constraint;
             return .{
+                .spacing = space,
+                .direction = .Horizontal,
+                .constraints = values,
+            };
+        }
+
+        pub fn verticalWithSpacing(space: u16, constraints: []const Constraint) @This() {
+            var values: [N]Constraint = undefined;
+            for (constraints, 0..) |constraint, i| values[i] = constraint;
+            return .{
+                .spacing = space,
                 .direction = .Vertical,
                 .constraints = values,
             };
@@ -69,6 +91,10 @@ pub fn Layout(comptime N: usize) type {
             var total_fill: u16 = 0;
             for (self.constraints, 0..) |constraint, i| {
                 indexes[i] = i;
+                if (i != 0) {
+                    remaining -|= self.spacing;
+                }
+
                 switch (constraint) {
                     .length => |length| {
                         sizes[i] = if (remaining -| length == 0) remaining else length;
@@ -156,9 +182,10 @@ pub fn Layout(comptime N: usize) type {
             var areas: [N]Rect = undefined;
             var last: Rect = Rect { .x = area.x, .y = area.y };
             for (sizes, 0..) |s, i| {
+                const spacing = if (i != 0) self.spacing else 0;
                 switch (self.direction) {
-                    .Horizontal => areas[i] = Rect { .x = last.x + last.width, .y = last.y, .width = s, .height = area.height },
-                    .Vertical => areas[i] = Rect { .x = last.x, .y = last.y + last.height, .height = s, .width = area.width },
+                    .Horizontal => areas[i] = Rect { .x = last.x + last.width + spacing, .y = last.y, .width = s, .height = area.height },
+                    .Vertical => areas[i] = Rect { .x = last.x, .y = last.y + last.height + spacing, .height = s, .width = area.width },
                 }
                 last = areas[i];
             }
@@ -203,31 +230,7 @@ pub const Constraint = union(enum) {
     /// other higher priority constraints to have their desired size.
     fill: u16,
 
-    pub const Ratio = std.meta.Tuple(&[_]type{ u16, u16 });
-
-    pub fn length(size: u16) @This() {
-        return .{ .length = size };
-    }
-
-    pub fn ratio(n: u16, d: u16) @This() {
-        return .{ .ratio = .{ n, d } };
-    }
-
-    pub fn percentage(percent: u16) @This() {
-        return .{ .percentage = percent };
-    }
-
-    pub fn min(size: u16) @This() {
-        return .{ .min = size };
-    }
-
-    pub fn max(size: u16) @This() {
-        return .{ .max = size };
-    }
-
-    pub fn fill(size: u16) @This() {
-        return .{ .fill = size };
-    }
+    pub const Ratio = std.meta.Tuple(&.{ u16, u16 });
 
     pub fn format(self: @This(), comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
         switch (self) {

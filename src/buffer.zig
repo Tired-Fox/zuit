@@ -149,11 +149,11 @@ pub const Buffer = struct {
     }
 
     pub fn render(self: *@This(), component: anytype, area: Rect) !void {
-        try renderComponent(component, self, area);
+        try renderComponent(self.alloc, component, self, area);
     }
 
     pub fn renderWithState(self: *@This(), component: anytype, area: Rect, state: anytype) !void {
-        try renderComponentWithState(component, self, area, state);
+        try renderComponentWithState(self.alloc, component, self, area, state);
     }
 
     pub fn write(self: *const @This(), writer: anytype, previous: []Cell) !void {

@@ -24,7 +24,7 @@ pub const Terminal = struct {
         return .{
             .buffer = try Buffer.init(allo, Rect{ .width = cols, .height = rows }),
             .previous = try allo.alloc(Cell, @intCast(cols * rows)),
-            .source = if (source == .Stdout) std.io.getStdOut() else std.io.getStdErr(),
+            .source = if (source == .stdout) std.io.getStdOut() else std.io.getStdErr(),
             .allo = allo,
         };
     }
@@ -43,7 +43,7 @@ pub const Terminal = struct {
 
     pub fn renderWithState(self: *@This(), component: anytype, state: anytype) !void {
         // Call render function on component(s)
-        try renderComponentWithState(&self.buffer, self.buffer.area, component, state, null);
+        try renderComponentWithState(self.allo, &self.buffer, self.buffer.area, component, state, null);
 
         // Render buffer iterating previous at the same time
         try self.buffer.write(self.source.writer(), self.previous);
@@ -52,19 +52,19 @@ pub const Terminal = struct {
     pub fn render(self: *@This(), component: anytype) !void {
         // Call render function on component(s)
         const region = Rect { .x = 0, .y = 0, .width = self.buffer.area.width, .height = self.buffer.area.height };
-        try renderComponent(&self.buffer, region, component, null);
+        try renderComponent(self.allo, &self.buffer, region, component, null);
 
         // Render buffer iterating previous at the same time
         try self.buffer.write(self.source.writer(), self.previous);
     }
 };
 
-pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, state: anytype, style: ?Style) !void {
+pub fn renderComponentWithState(allocator: std.mem.Allocator, buff: *Buffer, rect: Rect, component: anytype, state: anytype, style: ?Style) !void {
     const T = @TypeOf(component);
     const info = @typeInfo(T);
 
     switch (info) {
-        .Struct => {
+        .@"struct" => {
             const name: []const u8 = if (@hasDecl(T, "renderWithState"))
                 "renderWithState"
             else if (@hasDecl(T, "render"))
@@ -72,7 +72,7 @@ pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, s
             else return;
             const func = @field(T, name);
 
-            const params = @typeInfo(@TypeOf(func)).Fn.params;
+            const params = @typeInfo(@TypeOf(func)).@"fn".params;
             var args: std.meta.ArgsTuple(@TypeOf(func)) = undefined;
             inline for (params, 0..) |param, i| {
                 args[i] = switch(param.type.?) {
@@ -81,14 +81,15 @@ pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, s
                     *Buffer, *const Buffer => buff,
                     Rect => rect,
                     @TypeOf(state) => state,
+                    std.mem.Allocator => allocator,
                     else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                 };
             }
             try @call(.auto, func, args);
         },
-        .Pointer => |p| {
+        .pointer => |p| {
             switch (@typeInfo(p.child)) {
-                .Struct => {
+                .@"struct" => {
                     const name: []const u8 = if (@hasDecl(p.child, "renderWithState"))
                         "renderWithState"
                     else if (@hasDecl(p.child, "render"))
@@ -96,7 +97,7 @@ pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, s
                     else return;
 
                     const func = @field(p.child, name);
-                    const params = @typeInfo(@TypeOf(func)).Fn.params;
+                    const params = @typeInfo(@TypeOf(func)).@"fn".params;
                     var args: std.meta.ArgsTuple(@TypeOf(func)) = undefined;
                     inline for (params, 0..) |param, i| {
                         args[i] = switch(param.type.?) {
@@ -105,6 +106,7 @@ pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, s
                             *Buffer, *const Buffer => buff,
                             Rect => rect,
                             @TypeOf(state) => state,
+                            std.mem.Allocator => allocator,
                             else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                         };
                     }
@@ -129,13 +131,13 @@ pub fn renderComponentWithState(buff: *Buffer, rect: Rect, component: anytype, s
     }
 }
 
-pub fn renderComponent(buff: *Buffer, rect: Rect, component: anytype, style: ?Style) !void {
+pub fn renderComponent(allocator: std.mem.Allocator, buff: *Buffer, rect: Rect, component: anytype, style: ?Style) !void {
     const T = @TypeOf(component);
     const info = @typeInfo(T);
 
     switch (info) {
-        .Struct => if (@hasDecl(T, "render")) {
-            const params = @typeInfo(@TypeOf(T.render)).Fn.params;
+        .@"struct" => if (@hasDecl(T, "render")) {
+            const params = @typeInfo(@TypeOf(T.render)).@"fn".params;
             var args: std.meta.ArgsTuple(@TypeOf(T.render)) = undefined;
             inline for (params, 0..) |param, i| {
                 args[i] = switch(param.type.?) {
@@ -143,15 +145,16 @@ pub fn renderComponent(buff: *Buffer, rect: Rect, component: anytype, style: ?St
                     T => component,
                     *Buffer, *const Buffer => buff,
                     Rect => rect,
+                    std.mem.Allocator => allocator,
                     else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                 };
             }
             try @call(.auto, T.render, args);
         },
-        .Pointer => |p| {
+        .pointer => |p| {
             switch (@typeInfo(p.child)) {
-                .Struct => if (@hasDecl(p.child, "render")) {
-                    const params = @typeInfo(@TypeOf(p.child.render)).Fn.params;
+                .@"struct" => if (@hasDecl(p.child, "render")) {
+                    const params = @typeInfo(@TypeOf(p.child.render)).@"fn".params;
                     var args: std.meta.ArgsTuple(@TypeOf(p.child.render)) = undefined;
                     inline for (params, 0..) |param, i| {
                         args[i] = switch(param.type.?) {
@@ -159,6 +162,7 @@ pub fn renderComponent(buff: *Buffer, rect: Rect, component: anytype, style: ?St
                             p.child => component.*,
                             *Buffer, *const Buffer => buff,
                             Rect => rect,
+                            std.mem.Allocator => allocator,
                             else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                         };
                     }

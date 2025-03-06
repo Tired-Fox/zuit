@@ -8,6 +8,14 @@ pub const Borders = packed struct(u4) {
     right: bool = false,
     left: bool = false,
 
+    /// All sides of the border are enabled
+    ///
+    /// This includes `top`, `right`, `bottom`, `left`.
+    pub const all: @This() = @bitCast(@as(u4, 15));
+
+    /// Check if none of the borders are active
+    pub const none: @This() = .{};
+
     /// Get the total number of cells of padding that these
     /// borders create in on the `X-axis`
     pub fn padding_x(self: *const @This()) u16 {
@@ -42,18 +50,6 @@ pub const Borders = packed struct(u4) {
     /// borders create in on the `Y-axis`
     pub fn padding_y(self: *const @This()) u16 {
         return @intCast(@as(u4, @bitCast(self.*)) & 3 - 1);
-    }
-
-    /// All sides of the border are enabled
-    ///
-    /// This includes `top`, `right`, `bottom`, `left`.
-    pub fn all() @This() {
-        return @bitCast(@as(u4, 15));
-    }
-
-    /// Check if none of the borders are active
-    pub fn none(self: *const @This()) bool {
-        return @as(u4, @bitCast(self)) == 0;
     }
 };
 

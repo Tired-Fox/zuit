@@ -10,50 +10,50 @@ const Align = @import("../widget.zig").Align;
 pub const Title = struct {
     text: []const u8,
     style: ?Style = null,
-    position: Position = Position.TopLeft,
+    position: Position = Position.top_left,
 
     pub fn bottom(self: *const @This()) bool {
         return switch (self.position) {
-            .BottomLeft, .BottomCenter, .BottomRight => true,
+            .bottom_left, .bottom_center, .bottom_right => true,
             else => false,
         };
     }
 
     pub fn top(self: *const @This()) bool {
         return switch (self.position) {
-            .TopLeft, .TopCenter, .TopRight => true,
+            .top_left, .top_center, .top_right => true,
             else => false,
         };
     }
 
     pub fn left(self: *const @This()) bool {
         return switch (self.position) {
-            .TopLeft, .BottomLeft => true,
+            .top_left, .bottom_left => true,
             else => false,
         };
     }
 
     pub fn center(self: *const @This()) bool {
         return switch (self.position) {
-            .TopCenter, .BottomCenter => true,
+            .top_center, .bottom_center => true,
             else => false,
         };
     }
 
     pub fn right(self: *const @This()) bool {
         return switch (self.position) {
-            .TopRight, .BottomRight => true,
+            .top_right, .bottom_right => true,
             else => false,
         };
     }
 
     pub const Position = enum {
-        TopLeft,
-        TopCenter,
-        TopRight,
-        BottomLeft,
-        BottomCenter,
-        BottomRight,
+        top_left,
+        top_center,
+        top_right,
+        bottom_left,
+        bottom_center,
+        bottom_right,
     };
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
@@ -68,25 +68,25 @@ pub const Title = struct {
         // │                                             │
         // BottomLeft───────BottomCenter───────BottomRight
         switch(self.position) {
-            .TopLeft => buffer.setSlice(area.x, area.y, self.text[0..@min(self.text.len, area.width -| 1)], self.style),
-            .TopCenter => {
+            .top_left => buffer.setSlice(area.x, area.y, self.text[0..@min(self.text.len, area.width -| 1)], self.style),
+            .top_center => {
                 const x = @divFloor(area.width, 2) -| @divFloor(@as(u16, @intCast(self.text.len)), 2);
                 buffer.setSlice(x, 0, self.text[0..@min(self.text.len, area.width -| 1)], self.style);
             },
-            .TopRight => {
+            .top_right => {
                 const x = area.width -| @as(u16, @intCast(self.text.len));
                 buffer.setSlice(x, 0, self.text[0..@min(self.text.len, area.width -| 1)], self.style);
             },
-            .BottomLeft => {
+            .bottom_left => {
                 const y = area.y + area.height -| 1;
                 buffer.setSlice(area.x, y, self.text[0..@min(self.text.len, area.width -| 1)], self.style);
             },
-            .BottomCenter => {
+            .bottom_center => {
                 const x = @divFloor(area.width, 2) -| @divFloor(@as(u16, @intCast(self.text.len)), 2);
                 const y = area.y + area.height -| 1;
                 buffer.setSlice(x, y, self.text[0..@min(self.text.len, area.width -| 1)], self.style);
             },
-            .BottomRight => {
+            .bottom_right => {
                 const x = area.width -| @as(u16, @intCast(self.text.len));
                 const y = area.y + area.height -| 1;
                 buffer.setSlice(x, y, self.text[0..@min(self.text.len, area.width -| 1)], self.style);
@@ -135,6 +135,8 @@ pub const Line = struct {
     style: ?Style = null,
     trim: bool = false,
 
+    pub const empty: @This() = .{ .spans = &.{} };
+
     pub fn init(spans: []const Span) @This() {
         return .{ .spans = spans };
     }
@@ -149,10 +151,6 @@ pub const Line = struct {
 
     pub fn end(spans: []const Span) @This() {
         return .{ .spans = spans, .text_align = .End };
-    }
-
-    pub fn empty() @This() {
-        return .{ .spans = &.{} };
     }
 
     /// Utf8 codepoint length of the full line of text

@@ -100,15 +100,6 @@ pub const Padding = struct {
     pub fn proportional(size: u16) @This() {
         return .{ .left = size * 2, .right = size * 2, .bottom = size, .top = size };
     }
-
-    /// Only apply the padding to the `top`
-    pub fn top(size: u16) @This() { return .{ .top = size }; }
-    /// Only apply the padding to the `bottom`
-    pub fn bottom(size: u16) @This() { return .{ .bottom = size }; }
-    /// Only apply the padding to the `left`
-    pub fn left(size: u16) @This() { return .{ .left = size }; }
-    /// Only apply the padding to the `right`
-    pub fn right(size: u16) @This() { return .{ .right = size }; }
 };
 
 /// Widget that when rendered will clear the area it is rendered to.

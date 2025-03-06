@@ -15,7 +15,6 @@ const Set = symbols.border.Set;
 const BorderType = widget.BorderType;
 
 titles: ?[]const widget.Title = null,
-title_pos: enum { TopLeft, TopCenter, TopRight, BottomLeft, BottomCenter, BottomRight } = .TopLeft,
 borders: Borders = .{},
 set: Set = symbols.border.SINGLE,
 padding: Padding = .{},
@@ -25,7 +24,7 @@ style: ?Style = null,
 
 /// Construct a block with all borders
 pub fn bordered() @This() {
-    return .{ .borders = Borders.all() };
+    return .{ .borders = .all };
 }
 
 /// Get the inner area of the block after applying the border and the padding
