@@ -87,7 +87,6 @@ const App = struct {
             },
         };
         try block.render(buffer, area);
-        try widget.Clear.render(buffer, block.inner(area));
 
         const vert = widget.Layout(3).vertical(&.{
             .{ .fill = 1 },

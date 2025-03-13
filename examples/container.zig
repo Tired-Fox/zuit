@@ -118,7 +118,6 @@ const App = struct {
     table_state: widget.TableState = .{},
 
     pub fn render(self: *const @This(), buffer: *zuit.Buffer, area: zuit.Rect) !void {
-        try widget.Clear.render(buffer, area);
         const vert = widget.Layout(2).vertical(&.{
             .{ .fill = 1 },
             .{ .fill = 1 },

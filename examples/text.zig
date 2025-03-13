@@ -88,8 +88,6 @@ const c: [5][]const u8 = .{
 
 const App = struct {
     pub fn render(area: zuit.Rect, buffer: *zuit.Buffer) !void {
-        try widget.Clear.render(buffer, area);
-
         const v = widget.Layout(4)
             .vertical(&.{
                 .{ .length = 3 },

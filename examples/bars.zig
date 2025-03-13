@@ -78,7 +78,6 @@ pub fn main() !void {
 
 const App = struct {
     pub fn render(buffer: *zuit.Buffer, area: zuit.Rect) !void {
-        try widget.Clear.render(buffer, area);
         const vert = widget.Layout(4).vertical(&.{
             .{ .length = 1 },
             .{ .length = 10 },

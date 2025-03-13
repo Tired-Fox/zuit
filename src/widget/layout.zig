@@ -91,16 +91,20 @@ pub fn Layout(comptime N: usize) type {
             var total_fill: u16 = 0;
             for (self.constraints, 0..) |constraint, i| {
                 indexes[i] = i;
-                if (i != 0) {
-                    remaining -|= self.spacing;
-                }
-
                 switch (constraint) {
                     .length => |length| {
+                        if (i != 0) {
+                            remaining -|= self.spacing;
+                        }
+
                         sizes[i] = if (remaining -| length == 0) remaining else length;
                         remaining -|= length;
                     },
                     .ratio => |ratio| {
+                        if (i != 0) {
+                            remaining -|= self.spacing;
+                        }
+
                         const numerator: f32 = @floatFromInt(ratio[0]);
                         const denominator: f32 = @floatFromInt(ratio[1]);
 
@@ -109,6 +113,10 @@ pub fn Layout(comptime N: usize) type {
                         remaining -|= w;
                     },
                     .percentage => |p| {
+                        if (i != 0) {
+                            remaining -|= self.spacing;
+                        }
+
                         const percent: f32 = @as(f32, @floatFromInt(@min(p, 100))) / 100.0;
                         const w: u16 = @intFromFloat(@as(f32, @floatFromInt(size)) * percent);
 
@@ -116,6 +124,10 @@ pub fn Layout(comptime N: usize) type {
                         remaining -|= w;
                     },
                     .min => |min| {
+                        if (i != 0) {
+                            remaining -|= self.spacing;
+                        }
+
                         sizes[i] = if (remaining -| min == 0) remaining else min;
                         remaining -|= min;
                         mins +|= min;
@@ -133,6 +145,10 @@ pub fn Layout(comptime N: usize) type {
                 for (self.constraints, 0..) |constraint, i| {
                     switch (constraint) {
                         .max => |max| {
+                            if (i != 0) {
+                                remaining -|= self.spacing;
+                            }
+
                             // Max will fill entire space up to max
                             sizes[i] = if (remaining -| max == 0) remaining else max;
                             remaining -|= max;
@@ -166,6 +182,10 @@ pub fn Layout(comptime N: usize) type {
                             }
                         },
                         .fill => |fill| {
+                            if (i != 0) {
+                                remaining -|= self.spacing;
+                            }
+
                             var amount: u16 = @intFromFloat(@ceil(per * @as(f32, @floatFromInt(fill))));
                             amount = @min(remaining, amount);
 
