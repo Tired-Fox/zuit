@@ -10,9 +10,9 @@ pub fn Layout(comptime N: usize) type {
 
         spacing: u16 = 0,
 
-        pub fn horizontal(constraints: anytype) @This() {
+        pub fn horizontal(constraints: []const Constraint) @This() {
             var values: [N]Constraint = undefined;
-            inline for (constraints, 0..) |constraint, i| values[i] = constraint;
+            for (constraints, 0..) |constraint, i| values[i] = constraint;
             return .{
                 .direction = .Horizontal,
                 .constraints = values,

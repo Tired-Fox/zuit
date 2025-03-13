@@ -1,10 +1,3 @@
-# zuit
-
-Zig TUI library built from scratch only in zig
-
-## Example
-
-```zig
 const std = @import("std");
 const zerm = @import("zerm");
 const zuit = @import("zuit");
@@ -111,4 +104,3 @@ const App = struct {
         try Greet.renderWithState(buffer, vert, message);
     }
 };
-```
