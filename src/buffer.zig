@@ -54,10 +54,17 @@ pub const Buffer = struct {
         self.alloc.free(self.inner);
     }
 
+    pub fn clear(self: *@This()) !void {
+        for (self.inner)|*cell| {
+            cell.symbol = null;
+            cell.style = null;
+        }
+    }
+
     pub fn resize(self: *@This(), w: u16, h: u16) !void {
         self.alloc.free(self.inner);
         self.inner = try self.alloc.alloc(Cell, @intCast(w * h));
-        for (self.inner) |*cell| cell.* = .{};
+        for (self.inner) |*cell| cell.* = .{ .symbol = [_]u8 { ' ', 0, 0, 0 }};
         self.area.width = w;
         self.area.height = h;
     }
@@ -190,6 +197,8 @@ pub const Buffer = struct {
                 } else {
                     jump = true;
                 }
+
+                self.inner[pos] = .{};
             }
 
             if (h < self.area.height-1 and !jump) {
