@@ -73,6 +73,10 @@ pub fn renderComponentWithState(allocator: std.mem.Allocator, buff: *Buffer, rec
             else return;
             const func = @field(T, name);
 
+            var arena = std.heap.ArenaAllocator.init(allocator);
+            defer arena.deinit();
+            errdefer arena.deinit();
+
             const params = @typeInfo(@TypeOf(func)).@"fn".params;
             var args: std.meta.ArgsTuple(@TypeOf(func)) = undefined;
             inline for (params, 0..) |param, i| {
@@ -82,7 +86,7 @@ pub fn renderComponentWithState(allocator: std.mem.Allocator, buff: *Buffer, rec
                     *Buffer, *const Buffer => buff,
                     Rect => rect,
                     @TypeOf(state) => state,
-                    std.mem.Allocator => allocator,
+                    std.mem.Allocator => arena.allocator(),
                     else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                 };
             }
@@ -97,9 +101,14 @@ pub fn renderComponentWithState(allocator: std.mem.Allocator, buff: *Buffer, rec
                          "render"
                     else return;
 
+                    var arena = std.heap.ArenaAllocator.init(allocator);
+                    defer arena.deinit();
+                    errdefer arena.deinit();
+
                     const func = @field(p.child, name);
                     const params = @typeInfo(@TypeOf(func)).@"fn".params;
                     var args: std.meta.ArgsTuple(@TypeOf(func)) = undefined;
+
                     inline for (params, 0..) |param, i| {
                         args[i] = switch(param.type.?) {
                             *const p.child, *p.child => component,
@@ -107,7 +116,7 @@ pub fn renderComponentWithState(allocator: std.mem.Allocator, buff: *Buffer, rec
                             *Buffer, *const Buffer => buff,
                             Rect => rect,
                             @TypeOf(state) => state,
-                            std.mem.Allocator => allocator,
+                            std.mem.Allocator => arena.allocator(),
                             else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                         };
                     }
@@ -138,6 +147,10 @@ pub fn renderComponent(allocator: std.mem.Allocator, buff: *Buffer, rect: Rect, 
 
     switch (info) {
         .@"struct" => if (@hasDecl(T, "render")) {
+            var arena = std.heap.ArenaAllocator.init(allocator);
+            defer arena.deinit();
+            errdefer arena.deinit();
+
             const params = @typeInfo(@TypeOf(T.render)).@"fn".params;
             var args: std.meta.ArgsTuple(@TypeOf(T.render)) = undefined;
             inline for (params, 0..) |param, i| {
@@ -146,7 +159,7 @@ pub fn renderComponent(allocator: std.mem.Allocator, buff: *Buffer, rect: Rect, 
                     T => component,
                     *Buffer, *const Buffer => buff,
                     Rect => rect,
-                    std.mem.Allocator => allocator,
+                    std.mem.Allocator => arena.allocator(),
                     else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                 };
             }
@@ -155,6 +168,10 @@ pub fn renderComponent(allocator: std.mem.Allocator, buff: *Buffer, rect: Rect, 
         .pointer => |p| {
             switch (@typeInfo(p.child)) {
                 .@"struct" => if (@hasDecl(p.child, "render")) {
+                    var arena = std.heap.ArenaAllocator.init(allocator);
+                    defer arena.deinit();
+                    errdefer arena.deinit();
+
                     const params = @typeInfo(@TypeOf(p.child.render)).@"fn".params;
                     var args: std.meta.ArgsTuple(@TypeOf(p.child.render)) = undefined;
                     inline for (params, 0..) |param, i| {
@@ -163,7 +180,7 @@ pub fn renderComponent(allocator: std.mem.Allocator, buff: *Buffer, rect: Rect, 
                             p.child => component.*,
                             *Buffer, *const Buffer => buff,
                             Rect => rect,
-                            std.mem.Allocator => allocator,
+                            std.mem.Allocator => arena.allocator(),
                             else => @compileError("unsupported renderWithState function argument type " ++ @typeName(param.type.?)),
                         };
                     }

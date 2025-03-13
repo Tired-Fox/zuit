@@ -34,8 +34,8 @@ fn cleanup() !void {
 
 pub fn main() !void {
     // Use debug allocator to help catch memory leaks
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer if (gpa.deinit() == .leak) { std.debug.print("memory leak detected", .{}); };
     const allo = gpa.allocator();
 
     var term = try zuit.Terminal.init(allo, .stdout);
@@ -52,6 +52,7 @@ pub fn main() !void {
     defer cleanup() catch { std.log.err("error cleaning up terminal", .{}); };
 
     var app = App{};
+    try term.render(&app);
 
     while (true) {
         if (try stream.parseEvent()) |event| {
@@ -65,12 +66,11 @@ pub fn main() !void {
                 },
                 .resize => |resize| {
                     try term.resize(resize[0], resize[1]);
+                    try term.render(&app);
                 },
                 else => {}
             }
         }
-
-        try term.render(&app);
     }
 }
 

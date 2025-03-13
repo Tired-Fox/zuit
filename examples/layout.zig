@@ -33,8 +33,8 @@ fn cleanup() !void {
 
 pub fn main() !void {
     // Use debug allocator to help catch memory leaks
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer if (gpa.deinit() == .leak) { std.debug.print("memory leak detected", .{}); };
     const allo = gpa.allocator();
 
     var term = try zuit.Terminal.init(allo, .stdout);
@@ -51,6 +51,7 @@ pub fn main() !void {
     defer cleanup() catch { std.log.err("error cleaning up terminal", .{}); };
 
     var app = App{};
+    try term.render(&app);
 
     while (true) {
         if (try stream.parseEvent()) |event| {
@@ -65,12 +66,11 @@ pub fn main() !void {
                 },
                 .resize => |resize| {
                     try term.resize(resize[0], resize[1]);
+                    try term.render(&app);
                 },
                 else => {}
             }
         }
-
-        try term.render(&app);
     }
 }
 
@@ -130,6 +130,17 @@ const App = struct {
             const inner = container.inner(a);
 
             const text = try std.fmt.allocPrint(allo, "{d}", .{ a.width });
+            // This is optional. Behind the scenes the allocator provided
+            // to this method is an arena and is automatically cleaned up
+            // after the method returns.
+            //
+            // The buffer holds already allocated cells that are [4]u8 and the
+            // widget will copy the character data into each cell which means
+            // that it is okay to deinit the data after the widget's render
+            // call.
+            //
+            // If your priority is memory allocation then calling this after the render call
+            // of the widget that uses it will be best.
             defer allo.free(text);
 
             try widget.Line.center(&.{ .styled(text, .{ .fg = .magenta, .mod = .{ .bold = true } }) }).render(buffer, inner);

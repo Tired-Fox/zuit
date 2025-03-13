@@ -35,8 +35,8 @@ fn cleanup() !void {
 
 pub fn main() !void {
     // Use debug allocator to help catch memory leaks
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer if (gpa.deinit() == .leak) { std.debug.print("memory leak detected", .{}); };
     const allo = gpa.allocator();
 
     var term = try zuit.Terminal.init(allo, .stdout);
@@ -53,6 +53,7 @@ pub fn main() !void {
     defer cleanup() catch { std.log.err("error cleaning up terminal", .{}); };
 
     var app = App{};
+    try term.render(&app);
 
     while (true) {
         if (try stream.parseEvent()) |event| {
@@ -66,9 +67,11 @@ pub fn main() !void {
 
                     if (key.match(.{ .code = .down })) {
                         app.list_state = @min(app.list_state + 1, 7);
+                        try term.render(&app);
                     }
                     if (key.match(.{ .code = .up })) {
                         app.list_state -|= 1;
+                        try term.render(&app);
                     }
 
                     // left
@@ -78,14 +81,17 @@ pub fn main() !void {
                         } else {
                             app.table_state.column = 2;
                         }
+                        try term.render(&app);
                     }
                     // down
                     if (key.match(.{ .code = .char('j') })) {
                         app.table_state.row = @min(app.table_state.row + 1, 3);
+                        try term.render(&app);
                     }
                     // up
                     if (key.match(.{ .code = .char('k') })) {
                         app.table_state.row -|= 1;
+                        try term.render(&app);
                     }
                     // right
                     if (key.match(.{ .code = .char('l') })) {
@@ -94,16 +100,16 @@ pub fn main() !void {
                         } else {
                             app.table_state.column = 0;
                         }
+                        try term.render(&app);
                     }
                 },
                 .resize => |resize| {
                     try term.resize(resize[0], resize[1]);
+                    try term.render(&app);
                 },
                 else => {}
             }
         }
-
-        try term.render(&app);
     }
 }
 
@@ -140,9 +146,7 @@ const App = struct {
                 .columns = .{ .start(&.{ .raw("Left") }), .center(&.{ .raw("Middle") }), .end(&.{ .raw("Right") }) },
                 .margin = .{ .bottom = 1 },
             },
-            .footer = .{
-                .columns = .{ .start(&.{ .raw("Updated Dec 28") }), .empty, .empty }
-            },
+            .footer = .raw(.{ .start(&.{ .raw("Table Footer") }), .empty, .empty }),
             .rows = &.{
                 .raw(.{ .start(&.{ .raw("a") }), .center(&.{ .raw("b") }), .end(&.{ .raw("c") }) }),
                 .{
