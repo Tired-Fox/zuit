@@ -1,6 +1,6 @@
 .{
     .name = .zuit,
-    .version = "0.0.0",
+    .version = "0.0.1",
     .fingerprint = 0x94ab50946fa6f202, // Changing this has security and trust implications.
     .minimum_zig_version = "0.14.0",
     .dependencies = .{
