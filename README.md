@@ -5,6 +5,20 @@ Zig TUI library built from scratch only in zig
 This library was greatly influenced from the rust [Ratatui](https://ratatui.rs/) crate. The goal is to keep the heap allocations minimal
 while providing an easy to use api for immediate mode rendering.
 
+## Installation
+
+```
+zig fetch --save git+https://github.com/Tired-Fox/zuit#{commit|tag|branch}
+```
+
+```zig
+const zuit = b.dependency("zuit", .{
+    .target = target,
+    .optimize = optimize,
+});
+exe.root_module.addImport("zuit", zuit.module("zuit"));
+```
+
 ## Widgets
 
 ### Block
