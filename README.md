@@ -2,6 +2,81 @@
 
 Zig TUI library built from scratch only in zig
 
+This library was greatly influenced from the rust [Ratatui](https://ratatui.rs/) crate. The goal is to keep the heap allocations minimal
+while providing an easy to use api for immediate mode rendering.
+
+## Widgets
+
+### Block
+
+Base widget used as a container to create a border with titles, while also adding padding to it's contents
+
+```zig
+pub const Block = zuit.widget.Block;
+Block {
+    .titles = &.{
+        .{ .text = "top_left" },
+        .{ .text = "top_center", .position = .top_center, .style = .{ .fg = .green } },
+        .{ .text = "top_right", .position = .top_right },
+        .{ .text = "bottom_left", .position = .bottom_left },
+        .{ .text = "bottom_center", .position = .bottom_center },
+        .{ .text = "bottom_right", .position = .bottom_right },
+        // ...
+    },
+    .borders = .all,
+    .set = zuig.symbols.border.DOUBLE,
+    // .set = .{ .left = '|', .top_left = '#', ...  }
+    .padding = .proportional(1),
+    .title_style = .{ .fg = .red },
+    .border_style = .{ .fg = .black },
+    .style = .{ .bg = .white },
+}
+```
+
+![Box Widget](./assets/README-Widget-Box.png)
+
+### Paragraph
+
+Display text in user defined `lines` with styled `spans` with automatic text wrap support
+and alignment support.
+
+```zig
+pub const Paragraph = zuit.widget.Paragraph;
+pub const Line = zuit.widget.Line;
+pub const Span = zuit.widget.Span;
+
+Paragraph {
+    .lines = &.{
+        Line.init(&.{ Span.styled("Hello, ", .{ .fg = .red }) }),
+        Line.empty,
+        Line.init(&.{ Span.raw("world") }),
+    },
+    .text_align = .center,
+    .trim = true,
+    .wrap = true,
+}
+```
+
+```zig
+pub const Gauge = @import("./widget/gauge.zig").Gauge;
+```
+
+```zig
+pub const LineGauge = @import("./widget/gauge.zig").LineGauge;
+```
+
+```zig
+pub const ScrollBar = @import("./widget/scroll.zig").ScrollBar;
+```
+
+```zig
+pub const List = @import("./widget/list.zig").List;
+```
+
+```zig
+pub const Table = @import("./widget/table.zig").Table;
+```
+
 ## Example
 
 ```zig

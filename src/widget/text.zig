@@ -97,11 +97,11 @@ pub const Title = struct {
             .top_left => buffer.setSlice(area.x, area.y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style)),
             .top_center => {
                 const x = @divFloor(area.width, 2) -| @divFloor(@as(u16, @intCast(self.text.len)), 2);
-                buffer.setSlice(x, 0, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
+                buffer.setSlice(area.x + x, area.y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
             },
             .top_right => {
                 const x = area.width -| @as(u16, @intCast(self.text.len));
-                buffer.setSlice(x, 0, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
+                buffer.setSlice(area.x + x, area.y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
             },
             .bottom_left => {
                 const y = area.y + area.height -| 1;
@@ -110,12 +110,12 @@ pub const Title = struct {
             .bottom_center => {
                 const x = @divFloor(area.width, 2) -| @divFloor(@as(u16, @intCast(self.text.len)), 2);
                 const y = area.y + area.height -| 1;
-                buffer.setSlice(x, y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
+                buffer.setSlice(area.x + x, y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
             },
             .bottom_right => {
                 const x = area.width -| @as(u16, @intCast(self.text.len));
                 const y = area.y + area.height -| 1;
-                buffer.setSlice(x, y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
+                buffer.setSlice(area.x + x, y, self.text[0..@min(self.text.len, area.width -| 1)], state.getStyle(self.style));
             },
         }
     }
