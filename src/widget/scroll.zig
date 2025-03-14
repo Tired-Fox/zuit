@@ -74,11 +74,11 @@ pub const ScrollBar = struct {
                 buffer.set(x, area.y, set.begin, self.begin_style);
 
                 var pos = area.y + 1;
-                buffer.setRepeatX(x, pos, thumb.offset, set.track, self.track_style);
+                buffer.setRepeatY(x, pos, thumb.offset, set.track, self.track_style);
                 pos += thumb.offset;
-                buffer.setRepeatX(x, pos, thumb.size, set.thumb, self.thumb_style);
+                buffer.setRepeatY(x, pos, thumb.size, set.thumb, self.thumb_style);
                 pos += thumb.size;
-                buffer.setRepeatX(x, pos, area.height -| thumb.offset -| thumb.size -| 2, set.track, self.track_style);
+                buffer.setRepeatY(x, pos, area.height -| thumb.offset -| thumb.size -| 2, set.track, self.track_style);
 
                 buffer.set(x, area.y + area.height -| 1, set.end, self.end_style);
             },

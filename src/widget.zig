@@ -37,6 +37,7 @@ pub const ScrollBar = @import("./widget/scroll.zig").ScrollBar;
 pub const List = @import("./widget/list.zig").List;
 
 pub const Table = @import("./widget/table.zig").Table;
+pub const Row = @import("./widget/table.zig").Row;
 pub const TableState = @import("./widget/table.zig").TableState;
 
 /// Spacing on the inside of an area starting from it's edges

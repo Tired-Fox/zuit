@@ -33,8 +33,8 @@ pub fn inner(self: *const @This(), area: Rect) Rect {
     return Rect {
         .x = area.x +| self.padding.left +| self.borders.padding_left(),
         .y = area.y +| self.padding.top +| self.borders.padding_top(),
-        .width = area.width -| self.padding.left -| self.padding.right -| self.borders.padding_x(),
-        .height = area.height -| self.padding.top -| self.padding.bottom -| self.borders.padding_y(),
+        .width = area.width -| (self.padding.left + self.padding.right + self.borders.padding_x()),
+        .height = area.height -| (self.padding.top + self.padding.bottom + self.borders.padding_y()),
     };
 }
 

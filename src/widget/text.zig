@@ -201,9 +201,11 @@ pub const Line = struct {
                 // Truncate the end
                 var x: u16 = area.x;
                 for (self.spans, 0..) |item, i| {
-                    const max: usize = @intCast(area.width);
+                    const max: usize = @intCast(area.x + area.width);
 
-                    const text = if (self.trim and i == 0) std.mem.trimLeft(u8, item.text, &std.ascii.whitespace) else item.text;
+                    const text = if (self.trim and i == 0)
+                        std.mem.trimLeft(u8, item.text, &std.ascii.whitespace)
+                    else item.text;
                     var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = text };
                     while (iter.nextCodepoint()) |codepoint| : (x +|= 1) {
                         if (x > max) break;
@@ -332,8 +334,8 @@ pub const Paragraph = struct {
         if (self.wrap) {
             outer: for (self.lines) |line| {
                 if (line.spans.len == 0) {
-                    pos.y = @min(pos.y + 1, pos.height);
-                    if (pos.y == pos.height) break
+                    pos.y = @min(pos.y + 1, area.y + pos.height);
+                    if (pos.y == area.y + pos.height) break
                     else continue;
                 }
 
@@ -347,8 +349,8 @@ pub const Paragraph = struct {
                 var iter = chunk(&l, @intCast(area.width));
                 while (iter.next()) |item| {
                     try item.render(buffer, pos);
-                    pos.y = @min(pos.y + 1, pos.height);
-                    if (pos.y == pos.height) break :outer;
+                    pos.y = @min(pos.y + 1, area.y + pos.height);
+                    if (pos.y == area.y + pos.height) break :outer;
                 }
             }
         } else {
@@ -368,7 +370,7 @@ pub const Paragraph = struct {
     }
 };
 
-const LinkChunkIter = struct {
+const LineIter = struct {
     span: usize = 0,
     i: usize = 0,
     w:  usize = 0,
@@ -377,11 +379,6 @@ const LinkChunkIter = struct {
     size: usize,
     line: *const Line,
 
-    /// Returns a tuple of { start, end, line }
-    /// 
-    /// The line has spans that are a slice into the original line.
-    /// start and end are the offsets from the first and last span representing
-    /// splits of the original line.
     pub fn next(self: *@This()) ?Chunk {
         if (self.span >= self.line.spans.len) return null;
 
@@ -389,21 +386,22 @@ const LinkChunkIter = struct {
         var offset_start = self.i;
 
         width_loop: while (self.w < self.max and self.span < self.line.spans.len) {
-            const text = self.line.spans[self.span].text;
+            const span = self.line.spans[self.span];
+            var text = span.text[self.i..];
 
-            // TODO: IF first span and trim is enabled
-            //       THEN trim the whitespace from the start
-            if (self.span == start and self.line.trim and self.i == 0) {
-                self.i += text.len - std.mem.trimLeft(u8, text, &std.ascii.whitespace).len;
+            const trimmed = std.mem.trimLeft(u8, text, &std.ascii.whitespace);
+            if (trimmed.len != text.len) {
+                self.i += text.len - trimmed.len;
                 offset_start = self.i;
+                text = trimmed;
             }
 
-            var iter = std.unicode.Utf8Iterator { .i = self.i, .bytes = text };
+            var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = text };
             while (iter.nextCodepointSlice()) |_| {
                 self.w += 1;
                 if (self.w >= self.max) {
-                    self.i = iter.i;
-                    if (self.i == text.len) break;
+                    self.i += iter.i;
+                    if (self.i >= span.text.len) break;
                     break :width_loop;
                 }
             }
@@ -412,8 +410,6 @@ const LinkChunkIter = struct {
         }
         self.w = 0;
 
-        // TODO: IF last span and trim is enabled
-        //       THEN trim the whitespace from the end
         var offset_end = self.i;
         const spans = self.line.spans[start..if (offset_end > 0) self.span + 1 else self.span];
         if (self.line.trim and offset_end > 0) {
@@ -556,7 +552,7 @@ const LinkChunkIter = struct {
     };
 };
 
-fn chunk(line: *const Line, max: usize) LinkChunkIter {
+fn chunk(line: *const Line, max: usize) LineIter {
     return .{
         .size = line.len(),
         .line = line,

@@ -38,7 +38,11 @@ pub const List = struct {
         const current = @min(state, self.items.len - 1);
         const half = @divFloor(height, 2);
 
-        const left = if (current == self.items.len - 1) height else half;
+        const left = if (
+            self.items.len <= area.height
+            or current == self.items.len - 1
+        ) height
+        else half;
 
         const min = current -| left;
         const max = @min(current + (height - (current -| min)) + 1, self.items.len);

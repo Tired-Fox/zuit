@@ -47,7 +47,7 @@ pub const Gauge = struct {
             x -|= @intCast(@divFloor(label.len, 2));
             for (label, 0..) |ch, i| {
                 const pos = area.x + x + @as(u16, @intCast(i));
-                buffer.set(pos, y, ch, if (pos >= area.x + filled) self.unfilled_style else self.filled_style);
+                buffer.set(pos, area.y + y, ch, if (pos >= area.x + filled) self.unfilled_style else self.filled_style);
             }
         } else {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -57,7 +57,7 @@ pub const Gauge = struct {
             x -|= @intCast(@divFloor(label.len, 2));
             for (label, 0..) |ch, i| {
                 const pos = area.x + x + @as(u16, @intCast(i));
-                buffer.set(pos, y, ch, if (pos >= area.x + filled) self.unfilled_style else self.filled_style);
+                buffer.set(pos, area.y + y, ch, if (pos >= area.x + filled) self.unfilled_style else self.filled_style);
             }
         }
     }

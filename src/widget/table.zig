@@ -133,7 +133,11 @@ pub fn Table(N: usize) type {
             const current = @min(state.row, self.rows.len - 1);
             const half = @divFloor(height, 2);
 
-            const left = if (current == self.rows.len - 1) height else half;
+            const left = if (
+                self.rows.len <= height
+                or current == self.rows.len - 1
+            ) height
+            else half;
 
             const min = current -| left;
             const max = @min(current + (height - (current -| min)) + 1, self.rows.len);
@@ -171,7 +175,10 @@ pub fn Table(N: usize) type {
                 const style = self.style.merge(&row.style);
                 for (row.columns, cells, 0..) |td, cell, i| {
                     if (state.column != null and state.column.? == @as(u16, @intCast(i)) and self.column_highlight_style != null) {
-                        try td.renderWithState(buffer, cell, .{ .style = self.column_highlight_style.?.merge(&style), .method = .override });
+                        try td.renderWithState(buffer, cell, .{
+                            .style = self.column_highlight_style.?.merge(&style),
+                            .method = .override
+                        });
                     } else {
                         try td.renderWithState(buffer, cell, .{ .style = style });
                     }
@@ -216,7 +223,10 @@ pub fn Table(N: usize) type {
                 const style = self.style.merge(&row.style);
                 for (row.columns, cells, 0..) |td, cell, i| {
                     if (state.column != null and state.column.? == @as(u16, @intCast(i)) and self.column_highlight_style != null) {
-                        try td.renderWithState(buffer, cell, .{ .style = self.column_highlight_style.?.merge(&style), .method = .override });
+                        try td.renderWithState(buffer, cell, .{
+                            .style = self.column_highlight_style.?.merge(&style),
+                            .method = .override
+                        });
                     } else {
                         try td.renderWithState(buffer, cell, .{ .style = style });
                     }

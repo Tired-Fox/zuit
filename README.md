@@ -12,7 +12,7 @@ while providing an easy to use api for immediate mode rendering.
 Base widget used as a container to create a border with titles, while also adding padding to it's contents
 
 ```zig
-pub const Block = zuit.widget.Block;
+const Block = zuit.widget.Block;
 Block {
     .titles = &.{
         .{ .text = "top_left" },
@@ -41,15 +41,28 @@ Display text in user defined `lines` with styled `spans` with automatic text wra
 and alignment support.
 
 ```zig
-pub const Paragraph = zuit.widget.Paragraph;
-pub const Line = zuit.widget.Line;
-pub const Span = zuit.widget.Span;
+const Paragraph = zuit.widget.Paragraph;
+const Line = zuit.widget.Line;
+const Span = zuit.widget.Span;
+
+const content: [5][]const u8 = .{
+    "Suspendisse turpis eros, fringilla gravida ipsum ac, ",
+    "lacinia suscipit erat. Duis in faucibus",
+    " leo. Cras id lorem nunc. Interdum et malesuada fames ac ante ipsum primis in faucibus. ",
+    "Morbi rutrum nunc eu nulla placerat",
+    ", sit amet porttitor est mollis. Nulla pretium nulla laoreet ex commodo, vel imperdiet turpis pharetra. Aenean at eros sit amet velit dignissim blandit ac sed tellus. Vestibulum sed ex neque. Praesent non libero vel nulla accumsan sollicitudin ut eget risus. Mauris iaculis suscipit sem pulvinar elementum. Aliquam auctor tristique velit, in gravida tortor cursus vitae."
+};
 
 Paragraph {
     .lines = &.{
-        Line.init(&.{ Span.styled("Hello, ", .{ .fg = .red }) }),
+        Line.init(&.{
+            Span.raw(content[0]),
+            Span.styled(content[1], hl),
+            Span.raw(content[2]),
+            Span.styled(content[3], hl)
+        }),
         Line.empty,
-        Line.init(&.{ Span.raw("world") }),
+        Line.init(&.{ Span.raw(content[4]) })
     },
     .text_align = .center,
     .trim = true,
@@ -57,25 +70,135 @@ Paragraph {
 }
 ```
 
-```zig
-pub const Gauge = @import("./widget/gauge.zig").Gauge;
-```
+![Paragraph Widget](./assets/README-Widget-Paragraph.png)
+
+### Gauge
+
+Display a block progress bar with a percentage or custom label displayed in the center of the bar.
 
 ```zig
-pub const LineGauge = @import("./widget/gauge.zig").LineGauge;
+const Gauge = zuit.widget.Gauge;
+
+Gauge {
+    .progress = 0.5,
+    .filled_style = .{ .fg = .black, .bg = .red },
+    .unfilled_style = .{ .fg = .red },
+}
 ```
 
-```zig
-pub const ScrollBar = @import("./widget/scroll.zig").ScrollBar;
-```
+![Gauge Widget](./assets/README-Widget-Gauge.gif)
+
+### Line Gauge
+
+Display a progress bar within a single line with a percentage or custom label displayed before the bar.
 
 ```zig
-pub const List = @import("./widget/list.zig").List;
+const LineGauge = zuit.widget.LineGauge;
+LineGauge {
+    .progress = 0.5,
+    .set = .{ .horizontal = '█' },
+    .filled_style = .{ .fg = .green },
+    .unfilled_style = .{ .fg = .rgb(10, 20, 30) },
+}
 ```
 
+![Line Gauge Widget](./assets/README-Widget-LineGauge.gif)
+
+### Scrollabr
+
 ```zig
-pub const Table = @import("./widget/table.zig").Table;
+const ScrollBar = zuit.widget.ScrollBar;
+State {
+    .total = 10,
+    .position = 6,
+}
+ScrollBar {
+    .orientation = .HorizontalTop,
+}
 ```
+
+![Scroll Bar Widget](./assets/README-Widget-ScrollBar.png)
+
+### List
+
+Display a selectable list of stylable lines.
+
+```zig
+const List = zuit.widget.List;
+List {
+    .items = &.{
+        Line.start(&.{ Span.raw("Line 1") }),
+        Line.start(&.{ Span.raw("Line 2") }),
+        Line.start(&.{ Span.raw("Line 3") }),
+        Line.start(&.{ Span.raw("Line 4") }),
+        // ...
+    },
+    .highlight_style = .{ .bg = .yellow, .fg = .black },
+    .highlight_symbol = ">",
+}
+```
+
+![List Widget](./assets/README-Widget-List.gif)
+
+### Table
+
+Display a table where each cell can be selected and styled.
+
+```zig
+const Table = zuit.widget.Table;
+const TableState = zuit.widget.TableState;
+const Row = zuit.widget.Row;
+const Line = zuit.widget.Line;
+const Span = zuit.widget.Span;
+
+Table(3) {
+    .constraints = @splat(.{ .fill = 1 }),
+    .header = .{
+        .columns = .{
+            Line.start(&.{ Span.raw("Left") }),
+            Line.center(&.{ Span.raw("Middle") }),
+            Line.end(&.{ Span.raw("Right") })
+        },
+        .margin = .{ .bottom = 1 },
+    },
+    .footer = Row(3).raw(.{
+        Line.start(&.{ Span.raw("Table Footer") }),
+        Line.empty,
+        Line.empty
+    }),
+    .rows = &.{
+        Row(3).raw(.{
+            Line.start(&.{ Span.raw("a") }),
+            Line.center(&.{ Span.raw("b") }),
+            Line.end(&.{ Span.raw("c") })
+        }),
+        .{
+            .columns = .{
+                Line.start(&.{ Span.raw("d") }),
+                Line.center(&.{ Span.raw("e") }),
+                Line.end(&.{ Span.raw("f") })
+            },
+            .margin = .symmetric(1),
+        },
+        Row(3).raw(.{
+            Line.start(&.{ Span.raw("g") }),
+            Line.center(&.{ Span.raw("h") }),
+            Line.end(&.{ Span.raw("i") })
+        }),
+        Row(3).raw(.{
+            Line.start(&.{ Span.raw("j") }),
+            Line.center(&.{ Span.raw("k") }),
+            Line.end(&.{ Span.raw("l") })
+        })
+    },
+    .style = .{ .fg = .blue },
+    .row_highlight_style = .{ .bg = .xterm(.grey_7) },
+    .column_highlight_style = .{ .bg = .xterm(.grey_7) },
+    .cell_highlight_style = .{ .bg = .xterm(.grey_19) }
+}
+```
+
+![Table Widget](./assets/README-Widget-Table.gif)
 
 ## Example
 
