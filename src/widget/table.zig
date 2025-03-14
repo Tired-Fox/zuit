@@ -8,18 +8,21 @@ const Style = zerm.style.Style;
 const Buffer = root.Buffer;
 const Rect = root.Rect;
 
-const Padding = widgets.Padding;
+const Padding = root.Padding;
 const Line = widgets.Line;
 const Constraint = widgets.Constraint;
 const Layout = widgets.Layout;
 const Align = widgets.Align;
 const Span = widgets.Span;
 
+/// State of which column and row is selected
+/// in the table
 pub const TableState = struct {
     column: ?u16 = null,
     row: u16 = 0,
 };
 
+/// A collection of `N` columns
 pub fn Row(N: usize) type {
     return struct {
         columns: [N]Line,
@@ -45,6 +48,8 @@ pub fn Row(N: usize) type {
     };
 }
 
+/// A table with `N` columns where each row and column
+/// may be highlighted
 pub fn Table(N: usize) type {
     comptime var default_constraints: [N]Constraint = undefined;
     inline for (0..N) |i| {
@@ -56,15 +61,21 @@ pub fn Table(N: usize) type {
         rows: []const Row(N),
         footer: ?Row(N) = null,
 
+        /// The constraints used to layout each column
         constraints: [N]Constraint = default_constraints,
+        /// Spacing, gap, between each column
         spacing: u16 = 0,
+        /// Default styling to merge with each cells styling
         style: Style = .{},
 
+        /// The symbol used to prefix the line that is highlighted
         highlight_symbol: []const u8 = ">> ",
-        highlight_spacing: enum { always, never, auto } = .auto,
 
+        /// Merged with the rows styling if it is highlighted
         row_highlight_style: ?Style = null,
+        /// Merged with the column if the column is highlighted
         column_highlight_style: ?Style = null,
+        /// Merged with the cell if it is highlighted
         cell_highlight_style: ?Style = null,
 
         pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {

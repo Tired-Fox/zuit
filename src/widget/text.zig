@@ -7,6 +7,9 @@ const Buffer = root.Buffer;
 const Rect = root.Rect;
 const Align = @import("../widget.zig").Align;
 
+/// Optional state that can be passed to a text
+/// widget to override, merge, or fallback a given
+/// style
 pub const TextState = struct {
     style: ?Style = null,
     method: Method = .default,
@@ -29,11 +32,15 @@ pub const TextState = struct {
     }
 };
 
+/// Used to represent a `Block`'s title
+///
+/// This contains the content, the style, and the position of the title
 pub const Title = struct {
     text: []const u8,
     style: ?Style = null,
     position: Position = Position.top_left,
 
+    /// Determine if the title is on the bottom border
     pub fn bottom(self: *const @This()) bool {
         return switch (self.position) {
             .bottom_left, .bottom_center, .bottom_right => true,
@@ -41,6 +48,7 @@ pub const Title = struct {
         };
     }
 
+    /// Determine if the title is on the top border
     pub fn top(self: *const @This()) bool {
         return switch (self.position) {
             .top_left, .top_center, .top_right => true,
@@ -48,6 +56,7 @@ pub const Title = struct {
         };
     }
 
+    /// Determine of the title is left aligned
     pub fn left(self: *const @This()) bool {
         return switch (self.position) {
             .top_left, .bottom_left => true,
@@ -55,6 +64,7 @@ pub const Title = struct {
         };
     }
 
+    /// Determine of the title is center aligned
     pub fn center(self: *const @This()) bool {
         return switch (self.position) {
             .top_center, .bottom_center => true,
@@ -62,6 +72,7 @@ pub const Title = struct {
         };
     }
 
+    /// Determine of the title is right aligned
     pub fn right(self: *const @This()) bool {
         return switch (self.position) {
             .top_right, .bottom_right => true,
@@ -69,6 +80,7 @@ pub const Title = struct {
         };
     }
 
+    /// Location where the title is in a `Block`
     pub const Position = enum {
         top_left,
         top_center,
@@ -121,7 +133,7 @@ pub const Title = struct {
     }
 };
 
-/// Represents a possibly styled slice of text
+/// A styled `span` of text
 pub const Span = struct {
     text: []const u8,
     style: ?Style = null,
@@ -156,9 +168,7 @@ pub const Span = struct {
     }
 };
 
-/// Represents a list of `Span`'s that when combine form a full with single line
-///
-/// The line may also align it's text content.
+/// An aligned collection of `Span`s that can be trimmed taking up an entire row
 pub const Line = struct {
     spans: []const Span,
     text_align: ?Align = null,
@@ -167,18 +177,22 @@ pub const Line = struct {
 
     pub const empty: @This() = .{ .spans = &.{} };
 
+    /// Collect the provided spans and apply the default alignment
     pub fn init(spans: []const Span) @This() {
         return .{ .spans = spans };
     }
 
+    /// Collect the provided spans and apply the `start` alignment
     pub fn start(spans: []const Span) @This() {
         return .{ .spans = spans, .text_align = .start };
     }
 
+    /// Collect the provided spans and apply the `center` alignment
     pub fn center(spans: []const Span) @This() {
         return .{ .spans = spans, .text_align = .center };
     }
 
+    /// Collect the provided spans and apply the `end` alignment
     pub fn end(spans: []const Span) @This() {
         return .{ .spans = spans, .text_align = .end };
     }
@@ -312,9 +326,10 @@ fn utf8Length(buffer: []const u8) usize {
     return length;
 }
 
-/// Represents a list of `Span`'s that when combine form a full with single line
+/// Collection of aligned lines that could possibly wrap when they get too long
 ///
-/// The line may also align it's text content.
+/// Also provides overrides for trim, alignment, and styling if the line does not
+/// have it defined.
 pub const Paragraph = struct {
     lines: []const Line,
     /// When a line is too long it will be split to create a new line
@@ -325,7 +340,9 @@ pub const Paragraph = struct {
     /// This removes these characters from the calculation for wrapping
     /// and truncating.
     trim: bool = false,
+    /// Default alignment that is applied to a line if it uses the default alignment
     text_align: ?Align = null,
+    /// Default style that is applied to a line if it does not have styling
     style: ?Style = null,
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {
@@ -339,14 +356,15 @@ pub const Paragraph = struct {
                     else continue;
                 }
 
-                const l = Line {
-                    .spans = line.spans,
-                    .style = line.style orelse self.style,
-                    .text_align = line.text_align orelse self.text_align,
-                    .trim = line.trim or self.trim
-                };
-
-                var iter = chunk(&l, @intCast(area.width));
+                var iter = LineIter.init(
+                    &Line {
+                        .spans = line.spans,
+                        .style = line.style orelse self.style,
+                        .text_align = line.text_align orelse self.text_align,
+                        .trim = line.trim or self.trim
+                    },
+                    @intCast(area.width)
+                );
                 while (iter.next()) |item| {
                     try item.render(buffer, pos);
                     pos.y = @min(pos.y + 1, area.y + pos.height);
@@ -370,6 +388,7 @@ pub const Paragraph = struct {
     }
 };
 
+/// Iterator to chunk up individual lines into multiple wrapped lines
 const LineIter = struct {
     span: usize = 0,
     i: usize = 0,
@@ -378,6 +397,14 @@ const LineIter = struct {
     max: usize,
     size: usize,
     line: *const Line,
+
+    pub fn init(line: *const Line, max: usize) @This() {
+        return .{
+            .size = line.len(),
+            .line = line,
+            .max = max,
+        };
+    }
 
     pub fn next(self: *@This()) ?Chunk {
         if (self.span >= self.line.spans.len) return null;
@@ -551,11 +578,3 @@ const LineIter = struct {
         }
     };
 };
-
-fn chunk(line: *const Line, max: usize) LineIter {
-    return .{
-        .size = line.len(),
-        .line = line,
-        .max = max,
-    };
-}

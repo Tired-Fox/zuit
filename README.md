@@ -300,7 +300,6 @@ const App = struct {
     pub fn render(buffer: *zuit.Buffer, area: zuit.Rect) !void {
         const message = "world";
 
-        try widget.Clear.render(buffer, area);
         const hoz = Layout(3).horizontal(&.{ .{ .fill = 1 }, .{ .length = message.len + 8 }, .{ .fill = 1 } })
             .split(area)[1];
         const vert = Layout(3).vertical(&.{ .{ .fill = 1 }, .{ .length = 1 }, .{ .fill = 1 } })

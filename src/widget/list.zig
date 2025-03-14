@@ -12,12 +12,16 @@ const Line = widgets.Line;
 const Align = widgets.Align;
 const Span = widgets.Span;
 
+/// A list of styled lines that may be highlighted
 pub const List = struct {
     items: []const Line,
 
+    /// Symbol that is used to prefix the highlighted line
     highlight_symbol: []const u8 = ">>",
+    /// Override style used on the line that is highlighted
     highlight_style: ?Style = null,
 
+    /// Style to merge with each lines style
     style: ?Style = null,
 
     pub fn render(self: *const @This(), buffer: *Buffer, area: Rect) !void {

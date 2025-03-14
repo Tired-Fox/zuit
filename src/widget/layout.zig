@@ -1,15 +1,22 @@
 const std = @import("std");
 const Rect = @import("../root.zig").Rect;
 
+/// Splits an area into `N` subdivided areas given
+/// the provided constraints.
 pub fn Layout(comptime N: usize) type {
     const U = struct {
+        /// Number of splits
         pub const LENGTH: usize = N;
 
         constraints: [N]Constraint,
         direction: Direction,
 
+        /// Space between each subdivided area
+        ///
+        /// This will act like a gap between child widgets
         spacing: u16 = 0,
 
+        /// Apply a horizontal direction to the split given the constraints
         pub fn horizontal(constraints: []const Constraint) @This() {
             var values: [N]Constraint = undefined;
             for (constraints, 0..) |constraint, i| values[i] = constraint;
@@ -19,6 +26,7 @@ pub fn Layout(comptime N: usize) type {
             };
         }
 
+        /// Apply a vertical direction to the split given the constraints
         pub fn vertical(constraints: []const Constraint) @This() {
             var values: [N]Constraint = undefined;
             for (constraints, 0..) |constraint, i| values[i] = constraint;
@@ -28,6 +36,8 @@ pub fn Layout(comptime N: usize) type {
             };
         }
 
+        /// Apply a horizontal direction to the split given the constraints
+        /// and the spacing (gap) between children
         pub fn horizontalWithSpacing(space: u16, constraints: anytype) @This() {
             var values: [N]Constraint = undefined;
             inline for (constraints, 0..) |constraint, i| values[i] = constraint;
@@ -38,6 +48,8 @@ pub fn Layout(comptime N: usize) type {
             };
         }
 
+        /// Apply a vertical direction to the split given the constraints
+        /// and the spacing (gap) between children
         pub fn verticalWithSpacing(space: u16, constraints: []const Constraint) @This() {
             var values: [N]Constraint = undefined;
             for (constraints, 0..) |constraint, i| values[i] = constraint;
@@ -77,6 +89,7 @@ pub fn Layout(comptime N: usize) type {
             };
         }
 
+        /// Split the area into a list of subdivided areas
         pub fn split(self: *const @This(), area: Rect) [N]Rect {
             const size: u16 = switch (self.direction) {
                 .Horizontal => area.width,
@@ -216,11 +229,16 @@ pub fn Layout(comptime N: usize) type {
     return U;
 }
 
+/// Direction of the split
+///
+/// - `Horizontal`: Left to Right
+/// - `Vertical`: Top to Bottom
 pub const Direction = enum {
     Horizontal,
     Vertical,
 };
 
+/// Limit or restrict and portion of a layout
 pub const Constraint = union(enum) {
     /// Fixed length
     ///

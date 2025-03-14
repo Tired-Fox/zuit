@@ -8,6 +8,8 @@ const Rect = @import("./root.zig").Rect;
 const renderComponent = @import("./root.zig").renderComponent;
 const renderComponentWithState = @import("./root.zig").renderComponentWithState;
 
+/// Representation of a styled 1 column x 1 row unit
+/// in the terminal
 pub const Cell = struct {
     symbol: ?[4]u8 = null,
     style: ?Style = null,
@@ -17,7 +19,7 @@ pub const Cell = struct {
         if (self.symbol != null and other.symbol != null) {
             return std.mem.eql(u8, &self.symbol.?, &other.symbol.?);
         }
-        return self.symbol == null and self.symbol == null;
+        return false;
     }
 
     pub fn print(self: *const @This(), writer: anytype) !void {
@@ -29,6 +31,11 @@ pub const Cell = struct {
     }
 };
 
+/// A linear representation of each cell
+/// in the terminal.
+///
+/// This strut also contains logic for manipulating
+/// and rendering those cells.
 pub const Buffer = struct {
     alloc: std.mem.Allocator,
 
@@ -54,24 +61,22 @@ pub const Buffer = struct {
         self.alloc.free(self.inner);
     }
 
-    pub fn clear(self: *@This()) !void {
-        for (self.inner)|*cell| {
-            cell.symbol = null;
-            cell.style = null;
-        }
-    }
-
+    /// Resize the buffer and clear each cell of the buffer
+    ///
+    /// This will reallocate memory as needed for the updated
+    /// sizing.
     pub fn resize(self: *@This(), w: u16, h: u16) !void {
         self.alloc.free(self.inner);
         self.inner = try self.alloc.alloc(Cell, @intCast(w * h));
-        for (self.inner) |*cell| cell.* = .{ .symbol = [_]u8 { ' ', 0, 0, 0 }};
+        for (self.inner) |*cell| cell.* = .{};
         self.area.width = w;
         self.area.height = h;
     }
 
-    pub fn set(self: *@This(), x: u16, y: u16, char: anytype, style: ?Style) void {
-        const pos: usize = @intCast((y * self.area.width) + x);
-        if (x >= self.area.width or y >= self.area.height or pos >= self.inner.len) return;
+    /// Assign a character and style to a given cell
+    pub fn set(self: *@This(), col: u16, row: u16, char: anytype, style: ?Style) void {
+        const pos: usize = @intCast((row * self.area.width) + col);
+        if (col >= self.area.width or row >= self.area.height or pos >= self.inner.len) return;
 
         var item = &self.inner[pos];
 
@@ -88,10 +93,30 @@ pub const Buffer = struct {
         item.style = style;
     }
 
+    /// Clear a cell of the symbol and styling
+    pub fn unset(self: *@This(), col: u16, row: u16) void {
+        const pos: usize = @intCast((row * self.area.width) + col);
+        if (col >= self.area.width or row >= self.area.height or pos >= self.inner.len) return;
+
+        var item = &self.inner[pos];
+        item.style = null;
+        item.symbol = null;
+    }
+
+    /// Fill an area of cells with the same character and styling
     pub fn fill(self: *@This(), area: Rect, char: anytype, style: ?Style) void {
-        for (area.x..area.x+area.width) |w| {
-            for (area.y..area.y+area.height) |h| {
-                self.set(@intCast(w), @intCast(h), char, style);
+        for (area.x..area.x+area.width) |col| {
+            for (area.y..area.y+area.height) |row| {
+                self.set(@intCast(col), @intCast(row), char, style);
+            }
+        }
+    }
+
+    /// Clear each cell within the area
+    pub fn clear(self: *@This(), area: Rect) void {
+        for (0..area.x + area.width) |col| {
+            for (0..area.y + area.height) |row| {
+                self.unset(@intCast(col), @intCast(row));
             }
         }
     }
@@ -114,13 +139,15 @@ pub const Buffer = struct {
         return data.len;
     }
 
-    pub fn setFormatted(self: *@This(), x: u16, y: u16, style: ?Style, comptime fmt: []const u8, args: anytype) !void {
-        const pos: usize = @intCast((y * self.area.width) + x);
+    /// Format the given string and assign it to the given
+    /// row and column applying the same styling to each cell
+    pub fn setFormatted(self: *@This(), col: u16, row: u16, style: ?Style, comptime fmt: []const u8, args: anytype) !void {
+        const pos: usize = @intCast((row * self.area.width) + col);
         if (pos >= self.inner.len) return error.OutOfBounds;
 
         var context = WriterContext {
             .buffer = self,
-            .area = Rect { .x = x, .y = y, .width = self.area.width, .height = self.area.height },
+            .area = Rect { .x = col, .y = row, .width = self.area.width, .height = self.area.height },
             .style = style,
         };
         const writer = Writer { .context = &context };
@@ -128,86 +155,66 @@ pub const Buffer = struct {
         try writer.print(fmt, args);
     }
 
-    pub fn setSlice(self: *@This(), x: u16, y: u16, slice: []const u8, style: ?Style) void {
+    /// Assign a string slice to the given row and column applying the same
+    /// styling to each cell
+    pub fn setSlice(self: *@This(), col: u16, row: u16, slice: []const u8, style: ?Style) void {
         var iter = std.unicode.Utf8Iterator { .i = 0, .bytes = slice };
         var i: usize = 0;
         while (iter.nextCodepoint()) |codepoint| : (i += 1) {
-            self.set(x + @as(u16, @intCast(i)), y, codepoint, style);
+            self.set(col + @as(u16, @intCast(i)), row, codepoint, style);
         }
     }
 
-    pub fn setRepeatX(self: *@This(), x: u16, y: u16, count: usize, char: anytype, style: ?Style) void {
-        for (0..count) |i| {
-            self.set(x + @as(u16, @intCast(i)), y, char, style);
+    /// Repeat the same character and styling `n` times in the same row starting at the given column
+    pub fn setRepeatX(self: *@This(), col: u16, row: u16, n: usize, char: anytype, style: ?Style) void {
+        for (0..n) |i| {
+            self.set(col + @as(u16, @intCast(i)), row, char, style);
         }
     }
 
+    /// Repeat the same character and styling `n` times in the same column starting at the given row
     pub fn setRepeatY(self: *@This(), x: u16, y: u16, count: usize, char: anytype, style: ?Style) void {
         for (0..count) |i| {
             self.set(x, y + @as(u16, @intCast(i)), char, style);
         }
     }
 
-    pub fn get(self: *const @This(), x: u16, y: u16) ?*const Cell {
-        const pos: usize = @intCast((y * self.area.width) + x);
-        if (x >= self.area.width or y >= self.area.height or pos >= self.inner.len) return null;
+    /// Get a cell based on the row and column
+    pub fn get(self: *const @This(), col: u16, row: u16) ?*const Cell {
+        const pos: usize = @intCast((row * self.area.width) + col);
+        if (col >= self.area.width or row >= self.area.height or pos >= self.inner.len) return null;
 
         return &self.inner[pos];
     }
 
+    /// Render a component that implements the `render` method or function
+    ///
+    /// All of the method or function's arguments will be injected/resolved
+    /// based on what is available to be provided.
+    ///
+    /// Available Arguments:
+    ///     - @This() | *const @This() | *@This()
+    ///     - Rect
+    ///     - *Buffer | *const Buffer
+    ///     - std.mem.Allocator
     pub fn render(self: *@This(), component: anytype, area: Rect) !void {
         try renderComponent(self.alloc, component, self, area);
     }
 
+    /// Render a component that implements the `renderWithState` method or function
+    ///
+    /// This will pass the state on to the method or functions argument that matches the same type.
+    ///
+    /// All of the method or function's arguments will be injected/resolved
+    /// based on what is available to be provided.
+    ///
+    /// Available Arguments:
+    ///     - @This() | *const @This() | *@This()
+    ///     - Rect
+    ///     - *Buffer | *const Buffer
+    ///     - std.mem.Allocator
+    ///     - @TypeOf(state)
     pub fn renderWithState(self: *@This(), component: anytype, area: Rect, state: anytype) !void {
         try renderComponentWithState(self.alloc, component, self, area, state);
-    }
-
-    pub fn write(self: *const @This(), writer: anytype, previous: []Cell) !void {
-        var buffer = std.io.bufferedWriter(writer);
-        var output = buffer.writer();
-
-        var jump = false;
-        var style: ?Style = null;
-
-        try output.print("{s}", .{ Cursor { .col = self.area.x, .row = self.area.y } });
-        for (0..self.area.height) |h| {
-            for (0..self.area.width) |w| {
-                const pos: usize = @intCast((h * self.area.width) + w);
-                if (pos >= self.inner.len) break;
-
-                const cell = &self.inner[pos];
-                const old_cell = &previous[pos];
-
-                if (!cell.eql(old_cell)) {
-                    if (jump) {
-                        try output.print("{s}", .{ Cursor {
-                            .col = self.area.x + @as(u16, @intCast(w + 1)),
-                            .row = self.area.y + @as(u16, @intCast(h + 1))
-                        }});
-                        jump = false;
-                    }
-                    if (!std.meta.eql(cell.style, style)) {
-                        if (style) |s| try output.print("{s}", .{ s.reset() });
-                        if (cell.style) |s| try output.print("{s}", .{ s });
-                        style = cell.style;
-                    }
-                    try cell.print(output);
-                    previous[pos] = cell.*;
-                } else {
-                    jump = true;
-                }
-
-                self.inner[pos] = .{};
-            }
-
-            if (h < self.area.height-1 and !jump) {
-                try output.print("\r\n", .{});
-            }
-        }
-
-        if (style) |s| try output.print("{s}", .{ s.reset() });
-
-        try buffer.flush();
     }
 };

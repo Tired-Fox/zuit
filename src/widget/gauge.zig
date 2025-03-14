@@ -9,6 +9,7 @@ pub const Style = zerm.style.Style;
 
 pub const Set = symbols.line.Set;
 
+/// A progress bar that is display as a block filling it's entire area
 pub const Gauge = struct {
     /// Value from 0.0 to 1.0 representing the progress
     /// out of 100%
@@ -63,6 +64,7 @@ pub const Gauge = struct {
     }
 };
 
+/// A progress bar that is display as on a single line
 pub const LineGauge = struct {
     /// Value from 0.0 to 1.0 representing the progress
     /// out of 100%

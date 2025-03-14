@@ -10,14 +10,13 @@ const Rect = root.Rect;
 const Buffer = root.buffer.Buffer;
 
 const Borders = widget.Borders;
-const Padding = widget.Padding;
 const Set = symbols.border.Set;
 const BorderType = widget.BorderType;
 
 titles: ?[]const widget.Title = null,
 borders: Borders = .{},
 set: Set = symbols.border.SINGLE,
-padding: Padding = .{},
+padding: root.Padding = .{},
 
 title_style: Style = .{},
 border_style: Style = .{},

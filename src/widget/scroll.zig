@@ -9,6 +9,9 @@ const Rect = root.Rect;
 
 const Set = symbols.scroll.Set;
 
+/// Display a visual representation of scroll progress
+///
+/// This includes back and forward handles along with a track and thumb
 pub const ScrollBar = struct {
     orientation: Orientation,
     set: ?Set = null,
@@ -25,6 +28,7 @@ pub const ScrollBar = struct {
         HorizontalBottom
     };
 
+    /// Scrolling progress state used to render a `ScrollBar`
     pub const State = struct {
         total: usize,
         position: usize,
