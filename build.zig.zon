@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.14.0",
     .dependencies = .{
         .zerm = .{
-            .url = "git+https://github.com/Tired-Fox/zerm#184bd0cf6114572c0b6bc7f8e67196f69b4a22fe",
-            .hash = "zerm-0.0.1-4QSLcv_fAQB5WXW4rVzdGXnYv-x2LeVW8O03kfbFOM9p",
+            .url = "git+https://github.com/Tired-Fox/zerm?ref=v0.14.0#fd6fff615c6586a717a3e16925521320c4a82c3b",
+            .hash = "zerm-0.0.1-4QSLclLrAQAP42LkUzyWR115_so0stsaAbhc6Ki30g6X",
         },
     },
     .paths = .{
