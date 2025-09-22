@@ -34,7 +34,7 @@ pub const Terminal = struct {
                 try Buffer.init(allo, area),
             },
             .area = area,
-            .source = if (source == .stdout) std.io.getStdOut() else std.io.getStdErr(),
+            .source = if (source == .stdout) std.fs.File.stdout() else std.fs.File.stderr(),
             .allo = allo,
         };
     }
@@ -69,7 +69,9 @@ pub const Terminal = struct {
     pub fn renderWithState(self: *@This(), component: anytype, state: anytype) !void {
         // Call render function on component(s)
         try renderComponentWithState(self.allo, &self.buffers[1], self.buffers[1].area, component, state, null);
-        try self.write(self.source.writer());
+        var buff: [2048]u8 = undefined;
+        var writer = self.source.writer(&buff);
+        try self.write(&writer.interface);
     }
 
     /// Render a component that implements the `render` method or function
@@ -85,22 +87,21 @@ pub const Terminal = struct {
     pub fn render(self: *@This(), component: anytype) !void {
         // Call render function on component(s)
         try renderComponent(self.allo, &self.buffers[1], self.buffers[1].area, component, null);
-        try self.write(self.source.writer());
+        var buff: [2048]u8 = undefined;
+        var writer = self.source.writer(&buff);
+        try self.write(&writer.interface);
     }
 
     /// Write the buffer to a given writer optimizing with the changes
     /// from the previous render
-    pub fn write(self: *const @This(), writer: anytype) !void {
+    pub fn write(self: *const @This(), writer: *std.io.Writer) !void {
         const buff = &self.buffers[1];
         const previous = &self.buffers[0];
-
-        var buffered_writer = std.io.bufferedWriter(writer);
-        var output = buffered_writer.writer();
 
         var jump = false;
         var style: ?Style = null;
 
-        try output.print("{s}", .{ Cursor { .col = self.area.x, .row = self.area.y } });
+        try writer.print("{f}", .{ Cursor{ .col = self.area.x, .row = self.area.y } });
         for (0..self.area.height) |h| {
             for (0..self.area.width) |w| {
                 const pos: usize = @intCast((h * self.area.width) + w);
@@ -111,18 +112,15 @@ pub const Terminal = struct {
 
                 if (!cell.eql(old_cell)) {
                     if (jump) {
-                        try output.print("{s}", .{ Cursor {
-                            .col = self.area.x + @as(u16, @intCast(w + 1)),
-                            .row = self.area.y + @as(u16, @intCast(h + 1))
-                        }});
+                        try writer.print("{f}", .{ Cursor{ .col = self.area.x + @as(u16, @intCast(w + 1)), .row = self.area.y + @as(u16, @intCast(h + 1)) } });
                         jump = false;
                     }
                     if (!std.meta.eql(cell.style, style)) {
-                        if (style) |s| try output.print("{s}", .{ s.reset() });
-                        if (cell.style) |s| try output.print("{s}", .{ s });
+                        if (style) |s| try writer.print("{f}", .{s.reset()});
+                        if (cell.style) |s| try writer.print("{f}", .{s});
                         style = cell.style;
                     }
-                    try cell.print(output);
+                    try cell.print(writer);
                     previous.inner[pos] = cell.*;
                 } else {
                     jump = true;
@@ -131,14 +129,14 @@ pub const Terminal = struct {
                 buff.inner[pos] = .{};
             }
 
-            if (h < self.area.height-1 and !jump) {
-                try output.print("\r\n", .{});
+            if (h < self.area.height - 1 and !jump) {
+                try writer.print("\r\n", .{});
             }
         }
 
-        if (style) |s| try output.print("{s}", .{ s.reset() });
+        if (style) |s| try writer.print("{f}", .{ s.reset() });
 
-        try buffered_writer.flush();
+        try writer.flush();
     }
 };
 
@@ -164,8 +162,9 @@ pub fn renderComponentWithState(allocator: std.mem.Allocator, buff: *Buffer, rec
             const name: []const u8 = if (@hasDecl(T, "renderWithState"))
                 "renderWithState"
             else if (@hasDecl(T, "render"))
-                 "render"
-            else return;
+                "render"
+            else
+                return;
             const func = @field(T, name);
 
             var arena = std.heap.ArenaAllocator.init(allocator);
@@ -175,7 +174,7 @@ pub fn renderComponentWithState(allocator: std.mem.Allocator, buff: *Buffer, rec
             const params = @typeInfo(@TypeOf(func)).@"fn".params;
             var args: std.meta.ArgsTuple(@TypeOf(func)) = undefined;
             inline for (params, 0..) |param, i| {
-                args[i] = switch(param.type.?) {
+                args[i] = switch (param.type.?) {
                     *const T, *T => component,
                     T => component.*,
                     *Buffer, *const Buffer => buff,
@@ -193,8 +192,9 @@ pub fn renderComponentWithState(allocator: std.mem.Allocator, buff: *Buffer, rec
                     const name: []const u8 = if (@hasDecl(p.child, "renderWithState"))
                         "renderWithState"
                     else if (@hasDecl(p.child, "render"))
-                         "render"
-                    else return;
+                        "render"
+                    else
+                        return;
 
                     var arena = std.heap.ArenaAllocator.init(allocator);
                     defer arena.deinit();
@@ -205,7 +205,7 @@ pub fn renderComponentWithState(allocator: std.mem.Allocator, buff: *Buffer, rec
                     var args: std.meta.ArgsTuple(@TypeOf(func)) = undefined;
 
                     inline for (params, 0..) |param, i| {
-                        args[i] = switch(param.type.?) {
+                        args[i] = switch (param.type.?) {
                             *const p.child, *p.child => component,
                             p.child => component.*,
                             *Buffer, *const Buffer => buff,
@@ -221,18 +221,18 @@ pub fn renderComponentWithState(allocator: std.mem.Allocator, buff: *Buffer, rec
                     switch (p.child) {
                         []const u8 => try buff.setSlice(rect.x, rect.y, component, style),
                         u21, u8, u32, comptime_int => try buff.set(rect.x, rect.y, component, style),
-                        else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{ component }),
+                        else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{component}),
                     }
-                }
+                },
             }
         },
         else => {
             switch (T) {
                 []const u8 => try buff.setSlice(rect.x, rect.y, component, style),
                 u21, u8, u32, comptime_int => try buff.set(rect.x, rect.y, component, style),
-                else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{ component }),
+                else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{component}),
             }
-        }
+        },
     }
 }
 
@@ -259,7 +259,7 @@ pub fn renderComponent(allocator: std.mem.Allocator, buff: *Buffer, rect: Rect, 
             const params = @typeInfo(@TypeOf(T.render)).@"fn".params;
             var args: std.meta.ArgsTuple(@TypeOf(T.render)) = undefined;
             inline for (params, 0..) |param, i| {
-                args[i] = switch(param.type.?) {
+                args[i] = switch (param.type.?) {
                     *const T, *T => &component,
                     T => component,
                     *Buffer, *const Buffer => buff,
@@ -280,7 +280,7 @@ pub fn renderComponent(allocator: std.mem.Allocator, buff: *Buffer, rect: Rect, 
                     const params = @typeInfo(@TypeOf(p.child.render)).@"fn".params;
                     var args: std.meta.ArgsTuple(@TypeOf(p.child.render)) = undefined;
                     inline for (params, 0..) |param, i| {
-                        args[i] = switch(param.type.?) {
+                        args[i] = switch (param.type.?) {
                             *const p.child, *p.child => component,
                             p.child => component.*,
                             *Buffer, *const Buffer => buff,
@@ -295,24 +295,24 @@ pub fn renderComponent(allocator: std.mem.Allocator, buff: *Buffer, rect: Rect, 
                     switch (p.child) {
                         []const u8 => try buff.setSlice(rect.x, rect.y, component, style),
                         u21, u8, u32, comptime_int => try buff.set(rect.x, rect.y, component, style),
-                        else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{ component }),
+                        else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{component}),
                     }
-                }
+                },
             }
         },
         else => {
             switch (T) {
                 []const u8 => try buff.setSlice(rect.x, rect.y, component, style),
                 u21, u8, u32, comptime_int => try buff.set(rect.x, rect.y, component, style),
-                else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{ component }),
+                else => try buff.setFormatted(rect.x, rect.y, style, "{s}", .{component}),
             }
-        }
+        },
     }
 }
 
 /// Represents a component that will be renderd with a given style
 pub fn Styled(T: type) type {
-    return struct{
+    return struct {
         value: T,
         style: Style,
 

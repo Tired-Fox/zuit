@@ -22,7 +22,7 @@ pub const Cell = struct {
         return false;
     }
 
-    pub fn print(self: *const @This(), writer: anytype) !void {
+    pub fn print(self: *const @This(), writer: *std.io.Writer) !void {
         if (self.symbol) |symbol| {
             try writer.print("{s}", .{ symbol });
         } else {

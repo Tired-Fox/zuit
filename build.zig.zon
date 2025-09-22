@@ -1,12 +1,12 @@
 .{
     .name = .zuit,
-    .version = "0.0.1",
+    .version = "0.0.2",
     .fingerprint = 0x94ab50946fa6f202, // Changing this has security and trust implications.
-    .minimum_zig_version = "0.14.0",
+    .minimum_zig_version = "0.15.1",
     .dependencies = .{
         .zerm = .{
-            .url = "git+https://github.com/Tired-Fox/zerm?ref=main#fd6fff615c6586a717a3e16925521320c4a82c3b",
-            .hash = "zerm-0.0.1-4QSLclLrAQAP42LkUzyWR115_so0stsaAbhc6Ki30g6X",
+            .url = "git+https://github.com/Tired-Fox/zerm#174720560e39b21938252e7fa8f76fb069251b65",
+            .hash = "zerm-0.0.2-4QSLcosEAgBE336GThtlLOoONB1H8D25RpcPBown0i2Q",
         },
     },
     .paths = .{
